@@ -30,8 +30,9 @@ const csp = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
-  cacheComponents: true,
-  partialPrefetching: true,
+  // Static export tidak mendukung PPR ("Invariant: PPR cannot be enabled in export mode"); app tidak memakai "use cache".
+  cacheComponents: isDev,
+  partialPrefetching: isDev,
   turbopack: {
     rules: {
       "*.css": {
@@ -40,9 +41,15 @@ const nextConfig: NextConfig = {
       },
     },
   },
-  async headers() {
-    return [{ source: "/(.*)", headers: [{ key: "Content-Security-Policy", value: csp }] }];
-  },
+  // Build = static export untuk Firebase Hosting (tanpa backend). headers() tidak berlaku di static export,
+  // jadi CSP produksi ada di firebase.json (hosting.headers) — jaga agar tetap sinkron dengan `csp` di atas.
+  ...(isDev
+    ? {
+        async headers() {
+          return [{ source: "/(.*)", headers: [{ key: "Content-Security-Policy", value: csp }] }];
+        },
+      }
+    : { output: "export" as const }),
 };
 
 export default nextConfig;
