@@ -19,7 +19,8 @@ const csp = [
   "img-src 'self' blob: data:",
   "font-src 'self'",
   "worker-src 'self'",
-  "connect-src 'self' https://firebasevertexai.googleapis.com https://content-firebaseappcheck.googleapis.com https://www.google.com",
+  // data:: adapter on-device Firebase AI Logic men-decode inlineData lewat fetch(data:…) — tetap di perangkat.
+  "connect-src 'self' data: https://firebasevertexai.googleapis.com https://content-firebaseappcheck.googleapis.com https://www.google.com",
   "frame-src https://www.google.com https://recaptcha.google.com",
   "object-src 'none'",
   "base-uri 'self'",

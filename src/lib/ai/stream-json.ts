@@ -1,7 +1,7 @@
 /**
  * Parser inkremental untuk output streaming `{"results":[{…},{…}, …], …}`:
  * tiap kali satu objek di dalam array `results` lengkap, objek itu dikembalikan — tanpa menunggu JSON utuh.
- * Teks diterima sebagai potongan delta (Prompt API promptStreaming).
+ * Teks diterima sebagai potongan delta (chunk `generateContentStream` Firebase AI Logic).
  */
 export function createResultsStreamParser<T>(key = "results") {
   let buf = "";

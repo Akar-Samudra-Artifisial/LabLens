@@ -1,15 +1,26 @@
 "use client";
 
-import type { InferenceSource } from "firebase/ai";
-import { assertPayloadClean, type CloudPayload, type KnownPii, type PiiDetection, type PiiSpanKind } from "@/lib/pii";
-import { getCloudExplainModel } from "./models";
-import { fileToBitmap, openOnDeviceSession } from "./prompt-api";
+import { InferenceSource } from "firebase/ai";
+import {
+  assertPayloadClean,
+  type CloudPayload,
+  type KnownPii,
+  type PayloadLanguage,
+  payloadPiiKinds,
+  type PiiDetection,
+  utf8Bytes,
+  type PiiSpanKind,
+} from "../pii";
+import { parseExplanation } from "./explanation";
+import { iterateUntilAborted, raceAbort } from "./abortable";
+import { CLOUD_EXPLAIN_MODEL, getCloudExplainModel, getOnDeviceExtractionModel } from "./models";
+import { fileToInlineData } from "./prompt-api";
 import {
   flagFromRange,
   fromLeanExtraction,
+  type ExplanationResult,
   type LabExtraction,
   type LabExtractionLean,
-  labExtractionLeanJsonSchema,
   type LabTestResult,
   PII_PLACEHOLDERS,
   type PiiKind,
@@ -26,14 +37,35 @@ export interface ExtractStages {
   generateMs?: number;
 }
 
+/** ok = selesai; error = gagal (timeout, jaringan, respons tak valid); blocked = guard PII menolak, tidak ada request. */
+export type RoutingStatus = "ok" | "error" | "blocked";
+
+/** Payload persis yang diteruskan ke SDK (teks sama dengan argumen generateContent). */
+export interface SentPayload {
+  text: string;
+  language: PayloadLanguage;
+  bytes: number;
+  rows: number;
+  model: string;
+}
+
 export interface RoutingEvent {
   id: string;
   step: "extract" | "explain";
   location: InferenceSource | "unknown";
   latencyMs: number;
   ok: boolean;
+  status: RoutingStatus;
   error?: string;
   stages?: ExtractStages;
+  /** Byte UTF-8 yang meninggalkan perangkat untuk langkah ini: 0 untuk on-device & diblokir, ukuran payload untuk cloud. */
+  bytesSent: number;
+  /** Jumlah span PII yang terdeteksi aturan lokal pada dokumen (bila diketahui). */
+  piiDetectedLocal?: number;
+  /** Jenis PII yang ditemukan guard di payload yang dikirim — 0 bila lolos (tidak pernah dihardcode untuk cloud). */
+  piiSent: number;
+  /** Hanya explain yang benar-benar dikirim. */
+  payload?: SentPayload;
   at: number;
 }
 
@@ -61,8 +93,11 @@ const EXTRACT_PROMPT =
   "dan rentang rujukan persis seperti di gambar. Jangan tulis data identitas apa pun; " +
   "di piiKinds cukup sebut jenis data identitas pasien yang terlihat.";
 
-/** Batas waktu ekstraksi on-device. Run degeneratif tanpa batas berhenti baru setelah ±6 menit (spike). */
-export const EXTRACT_TIMEOUT_MS = 60_000;
+/**
+ * Batas waktu ekstraksi on-device. Run degeneratif tanpa batas berhenti baru setelah ±6 menit (spike);
+ * run sukses di mesin berbeban tinggi ±56 s, jadi beri ruang.
+ */
+export const EXTRACT_TIMEOUT_MS = 90_000;
 /** Output normal 14 baris ±1,3 rb karakter; jauh di atas ini = output degeneratif (berulang). */
 const EXTRACT_MAX_CHARS = 6_000;
 
@@ -81,9 +116,10 @@ export interface ExtractOptions {
 }
 
 /**
- * Ekstraksi on-device via Prompt API langsung (lihat alasan di prompt-api.ts):
- * gambar ≤1024 px → clone sesi warm → promptStreaming dengan schema ramping, timeout 60 s.
- * Baris hasil di-parse inkremental dari stream dan dikirim lewat onRow.
+ * Ekstraksi on-device via Firebase AI Logic (`generateContentStream`, mode ONLY_ON_DEVICE, schema ramping):
+ * gambar ≤1024 px → stream → baris hasil di-parse inkremental dan dikirim lewat onRow.
+ * SDK tidak menerima AbortSignal untuk on-device, jadi timeout/Batal memakai raceAbort: kita berhenti
+ * menunggu dan mengabaikan sisa stream (sesi lama dihancurkan SDK saat ekstraksi berikutnya membuat sesi baru).
  */
 export async function extractOnDevice(file: File, opts: ExtractOptions = {}): Promise<LabExtraction> {
   if (!["image/jpeg", "image/png"].includes(file.type)) {
@@ -108,37 +144,37 @@ export async function extractOnDevice(file: File, opts: ExtractOptions = {}): Pr
     mark = now;
     return ms;
   };
-  let bitmap: ImageBitmap | undefined;
-  let session: Awaited<ReturnType<typeof openOnDeviceSession>> | undefined;
+  // ONLY_ON_DEVICE: SDK tidak pernah memanggil cloud untuk model ini; ditimpa inferenceSource dari respons bila ada.
+  let location: InferenceSource = InferenceSource.ON_DEVICE;
   try {
     opts.onStage?.("prep");
-    bitmap = await fileToBitmap(file);
+    const inlineData = await raceAbort(fileToInlineData(file), ctrl.signal);
     stages.prepMs = lap();
 
-    opts.onStage?.("session");
-    session = await openOnDeviceSession(ctrl.signal);
-    stages.sessionMs = lap();
-
+    // SDK membuat sesi + membaca gambar di dalam satu panggilan; promise selesai saat chunk pertama tiba.
     opts.onStage?.("prefill");
     const prompt = opts.ocrText
       ? `${EXTRACT_PROMPT}\n\nTeks OCR lokal dari gambar yang sama (bisa salah baca; identitas sudah disensor) sebagai bantuan:\n${opts.ocrText}`
       : EXTRACT_PROMPT;
-    const reader = session
-      .promptStreaming(
-        [{ role: "user", content: [{ type: "text", value: prompt }, { type: "image", value: bitmap }] }],
-        { responseConstraint: labExtractionLeanJsonSchema, signal: ctrl.signal },
-      )
-      .getReader();
+    const result = await raceAbort(
+      getOnDeviceExtractionModel().generateContentStream([
+        { type: "text", text: prompt },
+        { type: "inlineData", inlineData },
+      ]),
+      ctrl.signal,
+    );
+    // Agregat internal SDK tidak dipakai; cegah unhandled rejection bila stream ditinggalkan.
+    result.response.catch(() => {});
     const rows = createResultsStreamParser<Omit<LabTestResult, "flag">>();
     let rowCount = 0;
     let text = "";
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    for await (const chunk of iterateUntilAborted(result.stream, ctrl.signal)) {
       if (stages.prefillMs === undefined) {
         stages.prefillMs = lap();
         opts.onStage?.("generate");
       }
+      if (chunk.inferenceSource) location = chunk.inferenceSource;
+      const value = chunk.text();
       text += value;
       for (const r of rows.push(value)) {
         stages.firstRowMs ??= elapsed(start);
@@ -151,17 +187,26 @@ export async function extractOnDevice(file: File, opts: ExtractOptions = {}): Pr
     stages.generateMs = lap();
 
     const parsed = fromLeanExtraction(JSON.parse(text) as LabExtractionLean);
-    record({ step: "extract", location: "on_device", latencyMs: elapsed(start), ok: true, stages });
+    // On-device: tidak ada request jaringan, jadi tidak ada byte/PII yang keluar.
+    record({ step: "extract", location, latencyMs: elapsed(start), ok: true, status: "ok", stages, bytesSent: 0, piiSent: 0 });
     return parsed;
   } catch (e) {
     const err = ctrl.signal.aborted ? ctrl.signal.reason : e;
-    record({ step: "extract", location: "on_device", latencyMs: elapsed(start), ok: false, error: errMsg(err), stages });
+    record({
+      step: "extract",
+      location,
+      latencyMs: elapsed(start),
+      ok: false,
+      status: "error",
+      error: errMsg(err),
+      stages,
+      bytesSent: 0,
+      piiSent: 0,
+    });
     throw err instanceof Error ? err : new Error(String(err));
   } finally {
     clearTimeout(timer);
     opts.signal?.removeEventListener("abort", onExternalAbort);
-    session?.destroy();
-    bitmap?.close();
   }
 }
 
@@ -191,25 +236,63 @@ export function mergeMaskedPii(extraction: LabExtraction, det: PiiDetection | nu
  * Penjelasan bahasa awam di cloud. Payload WAJIB dari `buildCloudPayload` (allowlist per field: nama tes kanonik
  * dari kamus, nilai/satuan/rentang berpola) dan diperiksa ulang `assertPayloadClean` di sini — cocok → diblokir, tidak ada request.
  */
-export async function explainInCloud(payload: CloudPayload, known?: KnownPii): Promise<string> {
+/**
+ * Catat penolakan guard yang terjadi saat MENYUSUN payload (buildCloudPayload → PiiLeakError) — tidak ada request.
+ * Hanya jenis PII (kategori) yang dicatat, tidak pernah isi payload.
+ */
+export function recordExplainBlocked(kinds: readonly string[], opts: ExplainOptions = {}): void {
+  record({
+    step: "explain",
+    location: InferenceSource.IN_CLOUD,
+    piiDetectedLocal: opts.piiDetectedLocal,
+    latencyMs: 0,
+    ok: false,
+    status: "blocked",
+    error: `Blocked by the PII guard before sending (${kinds.join(", ")}). Nothing left the device.`,
+    bytesSent: 0,
+    piiSent: 0,
+  });
+}
+
+export interface ExplainOptions {
+  /** Jumlah span PII yang terdeteksi lokal di dokumen — hanya untuk ditampilkan di panel routing. */
+  piiDetectedLocal?: number;
+}
+
+/**
+ * Output divalidasi `parseExplanation` (bentuk salah → ExplanationFormatError, event berstatus error).
+ * Mode ONLY_IN_CLOUD: SDK tidak pernah menjalankan model ini di perangkat, jadi lokasi default-nya in_cloud.
+ */
+export async function explainInCloud(payload: CloudPayload, known?: KnownPii, opts: ExplainOptions = {}): Promise<ExplanationResult> {
   const start = performance.now();
+  const base = { step: "explain", location: InferenceSource.IN_CLOUD, piiDetectedLocal: opts.piiDetectedLocal } as const;
   try {
     assertPayloadClean(payload.text, known);
   } catch (e) {
-    record({ step: "explain", location: "unknown", latencyMs: elapsed(start), ok: false, error: errMsg(e) });
+    record({ ...base, latencyMs: elapsed(start), ok: false, status: "blocked", error: errMsg(e), bytesSent: 0, piiSent: 0 });
     throw e;
   }
+  // Sesudah guard lulus: hitung ulang dari aturan yang sama atas teks yang akan dikirim (harus 0).
+  const piiSent = payloadPiiKinds(payload.text, known).length;
+  // Ukuran dihitung ulang dari teks yang benar-benar diteruskan ke SDK, bukan dipercaya dari builder.
+  const bytes = utf8Bytes(payload.text);
+  const sent: SentPayload = { text: payload.text, language: payload.language, bytes, rows: payload.sentRows, model: CLOUD_EXPLAIN_MODEL };
+  const sentFields = { bytesSent: bytes, piiSent, payload: sent };
+
+  let response;
   try {
-    const result = await getCloudExplainModel().generateContent(payload.text);
-    record({
-      step: "explain",
-      location: result.response.inferenceSource ?? "unknown",
-      latencyMs: elapsed(start),
-      ok: true,
-    });
-    return result.response.text();
+    ({ response } = await getCloudExplainModel().generateContent(payload.text));
   } catch (e) {
-    record({ step: "explain", location: "unknown", latencyMs: elapsed(start), ok: false, error: errMsg(e) });
+    record({ ...base, ...sentFields, latencyMs: elapsed(start), ok: false, status: "error", error: errMsg(e) });
+    throw e;
+  }
+  const location = response.inferenceSource ?? InferenceSource.IN_CLOUD;
+  try {
+    const parsed = parseExplanation(response.text());
+    record({ ...base, ...sentFields, location, latencyMs: elapsed(start), ok: true, status: "ok" });
+    return parsed;
+  } catch (e) {
+    record({ ...base, ...sentFields, location, latencyMs: elapsed(start), ok: false, status: "error", error: errMsg(e) });
     throw e;
   }
 }

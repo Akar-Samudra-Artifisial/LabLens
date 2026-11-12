@@ -93,6 +93,49 @@ export const labExtractionLeanJsonSchema = {
   },
 };
 
+/** Bahasa output penjelasan — satu sumber kebenaran di pii/cloud-payload.ts (enum tetap, bukan teks bebas). */
+export { PAYLOAD_LANGUAGES as EXPLAIN_LANGUAGES, type PayloadLanguage as ExplainLanguage } from "../pii/cloud-payload";
+
+export const DOCTOR_QUESTIONS = { min: 3, max: 6 } as const;
+
+export interface TestExplanation {
+  /** Nama kanonik yang dikirim di payload (dicocokkan ulang ke baris lokal lewat canonicalTestName). */
+  testName: string;
+  explanation: string;
+}
+
+/**
+ * Output penjelasan cloud. Flag sengaja TIDAK ada di sini: UI memakai flag lokal (flagFromRange), model hanya teks.
+ * `disclaimer` diminta dari model tetapi UI selalu merender disclaimer tetap sendiri.
+ */
+export interface ExplanationResult {
+  summary: string;
+  perTest: TestExplanation[];
+  doctorQuestions: string[];
+  disclaimer: string;
+}
+
+/** Skema cloud (generationConfig.responseSchema) untuk ExplanationResult. */
+export const explanationResultSchema = Schema.object({
+  properties: {
+    summary: Schema.string({ description: "2-3 plain-language sentences about the overall picture, no diagnosis." }),
+    perTest: Schema.array({
+      items: Schema.object({
+        properties: {
+          testName: Schema.string({ description: "Exactly the testName from the input row." }),
+          explanation: Schema.string({ description: "1-2 plain-language sentences: what it measures and what this value means." }),
+        },
+      }),
+    }),
+    doctorQuestions: Schema.array({
+      items: Schema.string(),
+      minItems: DOCTOR_QUESTIONS.min,
+      maxItems: DOCTOR_QUESTIONS.max,
+    }),
+    disclaimer: Schema.string(),
+  },
+});
+
 export const PII_PLACEHOLDERS: Record<PiiKind, string> = {
   name: "[NAMA]",
   nik: "[NIK]",

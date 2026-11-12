@@ -309,10 +309,22 @@ export const ALLOWLIST_WORDS: ReadonlySet<string> = new Set(
   ].flatMap((s) => normWords(s).split(" ")).filter(Boolean),
 );
 
+/** Alasan baris tidak dikirim. Hanya indeks + alasan — tanpa teks dokumen. */
+export type DropReason = "unknown_test" | "value_not_allowed" | "row_limit";
+
+export interface DroppedRow {
+  /** Indeks baris di input (0-based). */
+  index: number;
+  reason: DropReason;
+}
+
 export interface CloudRows {
   rows: CloudRow[];
+  /** Indeks input (0-based) tiap baris di `rows`. */
+  sentIndices: number[];
   /** Baris yang tidak dikirim (nama tes tidak dikenal / nilai di luar allowlist). */
   dropped: number;
+  droppedRows: DroppedRow[];
 }
 
 /**
@@ -321,11 +333,17 @@ export interface CloudRows {
  */
 export function sanitizeForCloud(results: readonly CloudRowInput[]): CloudRows {
   const rows: CloudRow[] = [];
-  for (const r of results.slice(0, MAX_CLOUD_ROWS)) {
+  const droppedRows: DroppedRow[] = [];
+  const sentIndices: number[] = [];
+  for (const [index, r] of results.slice(0, MAX_CLOUD_ROWS).entries()) {
     const testName = canonicalTestName(r.testName);
     const unit = allowUnit(r.unit);
     const value = allowValue(r.value, unit);
-    if (!testName || value === null) continue;
+    if (!testName || value === null) {
+      droppedRows.push({ index, reason: !testName ? "unknown_test" : "value_not_allowed" });
+      continue;
+    }
+    sentIndices.push(index);
     rows.push({
       testName: testName.slice(0, MAX_LEN.testName),
       value,
@@ -336,5 +354,6 @@ export function sanitizeForCloud(results: readonly CloudRowInput[]): CloudRows {
   }
   const split = crossRowPii(rows);
   if (split.length > 0) throw new PiiLeakError(split.map((k) => `${k} (lintas baris)`));
-  return { rows, dropped: results.length - rows.length };
+  for (let index = MAX_CLOUD_ROWS; index < results.length; index++) droppedRows.push({ index, reason: "row_limit" });
+  return { rows, sentIndices, dropped: results.length - rows.length, droppedRows };
 }

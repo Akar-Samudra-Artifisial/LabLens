@@ -163,7 +163,7 @@ async function main() {
         if (/Content Security Policy|Refused to/i.test(m.text())) cspViolations.push(m.text().slice(0, 200));
       });
       await app.goto(appUrl);
-      await app.waitForFunction(() => /model: siap|model: gagal/.test(document.body.innerText), null, { timeout: 120000 });
+      await app.waitForFunction(() => /model: ready|model: failed/.test(document.body.innerText), null, { timeout: 120000 });
       console.log("warm-up:", (await app.locator("p", { hasText: "model:" }).first().innerText()).trim());
       const runs = [];
       for (const tf of ["a-id-hematologi.truth.json", "b-us-lipid.truth.json", "c-id-hematologi-foto.truth.json"]) {
@@ -171,21 +171,22 @@ async function main() {
         const fixture = tf.replace(".truth.json", "");
         await app.setInputFiles('input[type="file"]', join(ROOT, "fixtures", truth.image));
         for (const ocrContext of [false, true]) {
-          const box = app.getByLabel(/beri teks OCR/);
+          const box = app.getByLabel(/give redacted OCR text/);
           if ((await box.isChecked()) !== ocrContext) await box.click();
           for (let i = 1; i <= n; i++) {
             const outBefore = outbound.length;
             const reqBefore = allReqs.length;
-            await app.getByRole("button", { name: "Ekstrak (on-device)" }).click();
+            await app.getByRole("button", { name: "Extract (on-device)" }).click();
             await app.waitForFunction(
               () => JSON.parse(document.querySelector('[data-testid="metrics"]').dataset.metrics || "{}").totalMs !== undefined,
               null,
               { timeout: 180000 },
             );
             const metrics = JSON.parse(await app.getAttribute('[data-testid="metrics"]', "data-metrics"));
-            const json = (await app.locator('[data-testid="result-json"]').innerText()).trim();
+            // textContent: JSON ada di <details> yang tertutup → innerText kosong.
+            const json = ((await app.locator('[data-testid="result-json"]').textContent()) ?? "").trim();
             const redacted = await app.locator('[data-testid="redacted-text"]').innerText().catch(() => "");
-            const err = await app.locator("p.text-red-600").allInnerTexts();
+            const err = await app.locator("[role=alert]").allInnerTexts();
             const r = json.startsWith("{") ? { ok: true, text: json } : { ok: false, error: err.join(" | ") || "tanpa hasil" };
             const score = scoreRun(truth, r);
             const rec = {
@@ -209,13 +210,13 @@ async function main() {
         }
         const before = outbound.length;
         // Event routing "explain" (ok/gagal/diblokir) menandai panggilan selesai; tunggu sebentar lagi untuk retry SDK.
-        const nExplain = await app.locator("li", { hasText: "· explain ·" }).count();
-        await app.getByRole("button", { name: "Jelaskan (cloud)" }).click();
+        const nExplain = await app.locator('li[data-step="explain"]').count();
+        await app.getByRole("button", { name: "Explain (cloud)" }).click();
         await app
-          .waitForFunction((k) => document.body.innerText.split("· explain ·").length - 1 > k, nExplain, { timeout: 60000 })
+          .waitForFunction((k) => document.querySelectorAll('li[data-step="explain"]').length > k, nExplain, { timeout: 60000 })
           .catch(() => {});
         await sleep(3000);
-        console.log("explain:", (await app.locator("li", { hasText: "· explain ·" }).last().innerText().catch(() => "?")).trim());
+        console.log("explain:", (await app.locator('li[data-step="explain"]').last().innerText().catch(() => "?")).trim());
         console.log("badge:", (await app.locator('[data-testid="cloud-badge"]').innerText()).trim());
         const explainReqs = outbound.slice(before);
         const explainLeaks = explainReqs.flatMap((q) => piiLeaks(truth, q.body).map((p) => p.kind));

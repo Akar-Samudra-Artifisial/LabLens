@@ -1,69 +1,60 @@
 "use client";
 
 /**
- * Akses langsung Chrome Prompt API (Gemini Nano) untuk ekstraksi on-device.
- *
- * Kenapa tidak lewat SDK hybrid (@firebase/ai 3.0.0, ChromeAdapterImpl):
- * - `generateContent` selalu `LanguageModel.create()` sesi baru per panggilan dan
- *   `getGenerativeModel` per klik membuat adapter baru → model bisa ter-unload, create cold ±13–16 s.
- * - Tidak ada `signal` per-request untuk on-device → tidak bisa timeout/batal (run degeneratif ±6 menit).
- * Di sini: satu sesi dasar dibuat sekali (warm-up), tiap request memakai `clone()` + AbortSignal + streaming.
+ * Helper on-device yang BUKAN inference: cek status ketersediaan Chrome Prompt API (untuk UI)
+ * dan persiapan gambar. Semua inference lewat Firebase AI Logic (lihat models.ts / router.ts).
  */
 
 export type Availability = "unavailable" | "downloadable" | "downloading" | "available";
 
-interface LanguageModelSession {
-  promptStreaming(
-    input: unknown,
-    options?: { responseConstraint?: object; signal?: AbortSignal },
-  ): ReadableStream<string>;
-  clone(options?: { signal?: AbortSignal }): Promise<LanguageModelSession>;
-  destroy(): void;
-}
-
 interface LanguageModelStatic {
   availability(options?: object): Promise<Availability>;
-  create(options?: object): Promise<LanguageModelSession>;
 }
 
 export const ON_DEVICE_CREATE_OPTIONS = {
-  expectedInputs: [{ type: "text" }, { type: "image" }],
-  expectedOutputs: [{ type: "text" }],
+  expectedInputs: [{ type: "text" as const }, { type: "image" as const }],
+  expectedOutputs: [{ type: "text" as const }],
 };
 
+/** Hanya untuk `availability()` (status UI) — jangan dipakai untuk inference. */
 export function promptApi(): LanguageModelStatic | undefined {
   return (globalThis as { LanguageModel?: LanguageModelStatic }).LanguageModel;
 }
 
-let baseSession: Promise<LanguageModelSession> | null = null;
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
 
 /**
- * Buat (sekali) sesi dasar agar model termuat sebelum klik pertama.
- * Saat status "downloadable", create() butuh user activation → panggil dari handler klik.
+ * Gambar → `inlineData` (base64) untuk SDK, sisi panjang ≤ maxSide.
+ * Gambar yang sudah kecil dikirim apa adanya; yang besar diperkecil lalu di-encode ulang dengan tipe yang sama.
  */
-export function warmUpOnDevice(): Promise<LanguageModelSession> {
-  const api = promptApi();
-  if (!api) return Promise.reject(new Error("Prompt API tidak ada — perlu Chrome Desktop 139+"));
-  baseSession ??= api.create(ON_DEVICE_CREATE_OPTIONS).catch((e: unknown) => {
-    baseSession = null;
-    throw e;
-  });
-  return baseSession;
-}
-
-export async function openOnDeviceSession(signal: AbortSignal): Promise<LanguageModelSession> {
-  const base = await warmUpOnDevice();
-  return base.clone({ signal });
-}
-
-/** Perkecil gambar (sisi panjang ≤ maxSide) langsung ke ImageBitmap — Prompt API menerima bitmap, tanpa re-encode. */
-export async function fileToBitmap(file: Blob, maxSide = 1024): Promise<ImageBitmap> {
+export async function fileToInlineData(
+  file: Blob,
+  maxSide = 1024,
+): Promise<{ mimeType: string; data: string }> {
   const bitmap = await createImageBitmap(file);
-  const longest = Math.max(bitmap.width, bitmap.height);
-  if (longest <= maxSide) return bitmap;
-  const scale = maxSide / longest;
-  const resizeWidth = Math.round(bitmap.width * scale);
-  const resizeHeight = Math.round(bitmap.height * scale);
-  bitmap.close();
-  return createImageBitmap(file, { resizeWidth, resizeHeight, resizeQuality: "high" });
+  try {
+    const longest = Math.max(bitmap.width, bitmap.height);
+    if (longest <= maxSide) {
+      return { mimeType: file.type, data: bytesToBase64(new Uint8Array(await file.arrayBuffer())) };
+    }
+    const scale = maxSide / longest;
+    const width = Math.round(bitmap.width * scale);
+    const height = Math.round(bitmap.height * scale);
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas 2D tidak tersedia untuk memperkecil gambar");
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    const blob = await canvas.convertToBlob({ type: file.type, quality: 0.92 });
+    return { mimeType: blob.type, data: bytesToBase64(new Uint8Array(await blob.arrayBuffer())) };
+  } finally {
+    bitmap.close();
+  }
 }
