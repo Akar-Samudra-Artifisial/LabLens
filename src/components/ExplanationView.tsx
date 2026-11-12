@@ -1,7 +1,10 @@
+import { useId, useState } from "react";
 import { matchExplanations } from "@/lib/ai/explanation";
 import type { ExplainLanguage, ExplanationResult, LabTestResult } from "@/lib/ai/schemas";
 import { FlagBadge } from "./FlagBadge";
+import { QuestionIcon } from "./icons";
 import { MedicalDisclaimer } from "./MedicalDisclaimer";
+import { BTN_SECONDARY } from "./ui";
 
 interface ExplanationViewProps {
   explanation: ExplanationResult;
@@ -12,43 +15,69 @@ interface ExplanationViewProps {
   language: ExplainLanguage;
 }
 
+const RANK: Readonly<Record<LabTestResult["flag"], number>> = { critical: 0, high: 1, low: 1, normal: 2, unknown: 3 };
+
+const CARD_TONE: Readonly<Record<LabTestResult["flag"], string>> = {
+  critical: "border-danger/60",
+  high: "border-warn/50",
+  low: "border-low/50",
+  normal: "border-line",
+  unknown: "border-line",
+};
+
 /**
  * Penjelasan terstruktur: teks dari model, flag dari ekstraksi lokal, disclaimer dari kode.
  * Banner critical dirender page dari baris lokal (tidak bergantung pada cloud), jadi tidak diulang di sini.
  * Dipasang di dalam section ber-h2 → heading mulai h3.
  */
 export function ExplanationView({ explanation, rows, sentIndices, language }: ExplanationViewProps) {
+  const [showAll, setShowAll] = useState(false);
+  const listId = useId();
   const matched = matchExplanations(rows, explanation.perTest, sentIndices);
+  // Abnormal dulu (critical → high/low), sisanya bisa dilipat. Indeks asli dipertahankan untuk pencocokan penjelasan.
+  const order = rows.map((_, i) => i).sort((a, b) => RANK[rows[a].flag] - RANK[rows[b].flag] || a - b);
+  const flaggedIdx = order.filter((i) => RANK[rows[i].flag] < RANK.normal);
+  const restIdx = order.filter((i) => RANK[rows[i].flag] >= RANK.normal);
+  const flagged = flaggedIdx.length;
+  // Tanpa baris abnormal tidak ada yang dilipat.
+  const collapsible = flagged > 0 && restIdx.length > 0;
+  const visible = collapsible && !showAll ? flaggedIdx : order;
+  const allNormal = restIdx.every((i) => rows[i].flag === "normal");
 
   return (
-    <section aria-labelledby="explanation-heading" className="flex flex-col gap-4" data-testid="explanation">
-      <h3 id="explanation-heading" className="text-lg font-semibold">
-        Your results, explained
-      </h3>
+    <section aria-labelledby="explanation-heading" className="flex flex-col gap-5 motion-safe:animate-enter" data-testid="explanation">
+      <div className="flex flex-col gap-2 rounded-control border border-cloud/40 bg-cloud-soft p-4">
+        <h3 id="explanation-heading" className="text-lg font-semibold tracking-tight">
+          Your results, explained
+        </h3>
+        <p className="text-xs font-medium text-cloud-ink">
+          {rows.length} tests · {flagged} outside the reference range
+        </p>
+        <p lang={language} className="text-base leading-relaxed" data-testid="explanation-summary">
+          {explanation.summary}
+        </p>
+      </div>
 
-      <p lang={language} className="text-base leading-relaxed" data-testid="explanation-summary">
-        {explanation.summary}
-      </p>
-
-      <ul className="grid gap-3 sm:grid-cols-2" aria-label="Explanation per test" data-testid="explanation-cards">
-        {rows.map((r, i) => {
+      <ul id={listId} className="grid gap-3 sm:grid-cols-2" aria-label={`Explanation per test, ${visible.length} of ${rows.length} shown`} data-testid="explanation-cards">
+        {visible.map((i) => {
+          const r = rows[i];
           const ex = matched[i];
           return (
-            <li key={`${i}-${r.testName}`} className="flex flex-col gap-2 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+            <li key={`${i}-${r.testName}`} className={`flex flex-col gap-2 rounded-control border bg-surface p-3.5 ${CARD_TONE[r.flag]}`}>
               <div className="flex items-start justify-between gap-2">
-                <h4 className="font-medium">{r.testName}</h4>
+                <h4 className="font-semibold leading-snug">{r.testName}</h4>
                 <FlagBadge flag={r.flag} />
               </div>
               <p className="text-sm">
-                <span className="font-mono text-base font-semibold">{r.value}</span> {r.unit}
-                {r.referenceRange && <span className="text-zinc-600 dark:text-zinc-400"> · range {r.referenceRange}</span>}
+                <span className="font-mono text-lg font-semibold tabular-nums">{r.value}</span> <span className="text-muted">{r.unit}</span>
+                {r.referenceRange && <span className="block text-xs text-muted">Reference {r.referenceRange}</span>}
               </p>
               {ex ? (
                 <p lang={language} className="text-sm leading-relaxed">
                   {ex.explanation}
                 </p>
               ) : (
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                <p className="text-sm text-muted">
                   {sentIndices.includes(i)
                     ? "The cloud returned no explanation for this row."
                     : "Not sent to the cloud (not in the lab-test dictionary or value format), so there is no explanation for this row."}
@@ -58,10 +87,29 @@ export function ExplanationView({ explanation, rows, sentIndices, language }: Ex
           );
         })}
       </ul>
+      {collapsible && (
+        <button
+          type="button"
+          aria-expanded={showAll}
+          aria-controls={listId}
+          onClick={() => setShowAll((v) => !v)}
+          className={`${BTN_SECONDARY} self-start`}
+          data-testid="explanation-toggle"
+        >
+          {showAll
+            ? `Show only the ${flagged} result${flagged === 1 ? "" : "s"} outside the range`
+            : `Show ${restIdx.length} ${allNormal ? "normal" : "other"} result${restIdx.length === 1 ? "" : "s"}`}
+        </button>
+      )}
 
-      <div>
-        <h4 className="font-medium">Questions to ask your doctor</h4>
-        <ol lang={language} className="mt-2 list-decimal space-y-1 pl-6 text-sm leading-relaxed" data-testid="doctor-questions">
+      <div className="rounded-control border border-line p-4">
+        <h4 className="flex items-center gap-2 font-semibold">
+          <span className="text-cloud-ink">
+            <QuestionIcon size={18} />
+          </span>
+          Questions to ask your doctor
+        </h4>
+        <ol lang={language} className="mt-2 list-decimal space-y-1.5 pl-6 text-sm leading-relaxed marker:text-muted" data-testid="doctor-questions">
           {explanation.doctorQuestions.map((q) => (
             <li key={q}>{q}</li>
           ))}

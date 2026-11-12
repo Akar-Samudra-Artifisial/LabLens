@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "LabLens",
-  description: "Penjelas hasil lab privat — on-device + cloud hybrid AI",
+  description: "Private lab-report explainer — on-device + cloud hybrid AI",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

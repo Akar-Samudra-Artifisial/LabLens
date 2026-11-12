@@ -1,6 +1,9 @@
 import type { SentPayload } from "@/lib/ai/router";
 import type { LabTestResult } from "@/lib/ai/schemas";
 import type { CloudPayload, DropReason, FallbackPayload } from "@/lib/pii";
+import { CheckIcon } from "./icons";
+import { LocationTag } from "./LocationTag";
+import { PRE } from "./ui";
 
 /** Pratinjau payload dari buildCloudPayload yang sama dengan yang dipakai tombol Explain. */
 export type PayloadPreview =
@@ -24,11 +27,11 @@ export const fmtBytes = (n: number) => `${n.toLocaleString("en-US")} B`;
 
 function Meta({ items }: { items: readonly [string, string][] }) {
   return (
-    <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs sm:grid-cols-4">
+    <dl className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-control border border-line bg-surface-2 p-2.5 text-xs">
       {items.map(([k, v]) => (
-        <div key={k}>
-          <dt className="text-zinc-600 dark:text-zinc-400">{k}</dt>
-          <dd className="font-mono">{v}</dd>
+        <div key={k} className="min-w-0">
+          <dt className="text-muted">{k}</dt>
+          <dd className="truncate font-mono font-medium">{v}</dd>
         </div>
       ))}
     </dl>
@@ -37,14 +40,20 @@ function Meta({ items }: { items: readonly [string, string][] }) {
 
 function PayloadText({ text, label, testId }: { text: string; label: string; testId: string }) {
   return (
-    <pre
-      tabIndex={0}
-      aria-label={label}
-      className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md bg-zinc-100 p-2 font-mono text-xs text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 dark:focus-visible:outline-zinc-100"
-      data-testid={testId}
-    >
+    <pre tabIndex={0} aria-label={label} className={`max-h-64 ${PRE}`} data-testid={testId}>
       {text}
     </pre>
+  );
+}
+
+function Heading({ id, children, sent }: { id: string; children: string; sent?: boolean }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <h4 id={id} className="text-sm font-semibold">
+        {children}
+      </h4>
+      <LocationTag where={sent ? "cloud" : "device"} label={sent ? "Left the device" : "Still on this device"} />
+    </div>
   );
 }
 
@@ -63,14 +72,12 @@ export function PayloadInspector({ preview, sent, rows, fallback }: PayloadInspe
   const previewText = sent?.step === "extract" ? (fallback?.state === "ready" ? fallback.payload.text : null) : preview.state === "ready" ? preview.payload.text : null;
   const identical = sent && previewText !== null ? sent.text === previewText : null;
   return (
-    <div className="flex flex-col gap-4 text-sm">
+    <div className="flex flex-col gap-5 text-sm">
       {fallback && (
         <section aria-labelledby="fallback-before" className="flex flex-col gap-2">
-          <h4 id="fallback-before" className="font-medium">
-            Before sending — private cloud extraction
-          </h4>
+          <Heading id="fallback-before">Before sending — private cloud extraction</Heading>
           {fallback.state === "locked" ? (
-            <p className="text-amber-800 dark:text-amber-300">{fallback.reason}</p>
+            <p className="text-warn-ink">{fallback.reason}</p>
           ) : (
             <>
               <Meta
@@ -88,16 +95,10 @@ export function PayloadInspector({ preview, sent, rows, fallback }: PayloadInspe
       )}
 
       <section aria-labelledby="payload-before" className="flex flex-col gap-2">
-        <h4 id="payload-before" className="font-medium">
-          Before sending — explanation preview
-        </h4>
-        {preview.state === "unavailable" && <p className="text-zinc-600 dark:text-zinc-400">{preview.reason}</p>}
-        {preview.state === "empty" && <p className="text-zinc-600 dark:text-zinc-400">{preview.message}</p>}
-        {preview.state === "blocked" && (
-          <p className="text-red-700 dark:text-red-400">
-            The PII guard would block this payload ({preview.kinds.join(", ")}). Nothing can be sent.
-          </p>
-        )}
+        <Heading id="payload-before">Before sending — explanation preview</Heading>
+        {preview.state === "unavailable" && <p className="text-muted">{preview.reason}</p>}
+        {preview.state === "empty" && <p className="text-muted">{preview.message}</p>}
+        {preview.state === "blocked" && <p className="text-danger-ink">The PII guard would block this payload ({preview.kinds.join(", ")}). Nothing can be sent.</p>}
         {preview.state === "ready" && (
           <>
             <Meta
@@ -112,7 +113,7 @@ export function PayloadInspector({ preview, sent, rows, fallback }: PayloadInspe
             {preview.payload.dropped.length > 0 && (
               <div>
                 <p className="text-xs font-medium">Kept on this device (not sent):</p>
-                <ul className="mt-1 space-y-0.5 text-xs text-zinc-700 dark:text-zinc-300" data-testid="payload-dropped">
+                <ul className="mt-1 space-y-0.5 text-xs text-muted" data-testid="payload-dropped">
                   {preview.payload.dropped.map((d) => (
                     <li key={d.index}>
                       Row {d.index + 1}
@@ -127,11 +128,11 @@ export function PayloadInspector({ preview, sent, rows, fallback }: PayloadInspe
       </section>
 
       <section aria-labelledby="payload-after" className="flex flex-col gap-2">
-        <h4 id="payload-after" className="font-medium">
+        <Heading id="payload-after" sent>
           After sending — exact text sent
-        </h4>
+        </Heading>
         {!sent ? (
-          <p className="text-zinc-600 dark:text-zinc-400">Nothing has been sent to the cloud yet.</p>
+          <p className="text-muted">Nothing has been sent to the cloud yet.</p>
         ) : (
           <>
             <Meta
@@ -144,12 +145,13 @@ export function PayloadInspector({ preview, sent, rows, fallback }: PayloadInspe
               ]}
             />
             {identical !== null && (
-              <p className="text-xs" data-testid="payload-identical">
-                {identical ? "✓ Identical to the current preview." : "Differs from the current preview (rows or language changed since)."}
+              <p className={`flex items-center gap-1.5 text-xs ${identical ? "text-ok-ink" : "text-warn-ink"}`} data-testid="payload-identical">
+                {identical && <CheckIcon size={14} />}
+                {identical ? "Identical to the current preview." : "Differs from the current preview (rows or language changed since)."}
               </p>
             )}
             <PayloadText text={sent.text} label="Cloud payload as sent" testId="payload-sent" />
-            <p className="text-xs text-zinc-600 dark:text-zinc-400">
+            <p className="text-xs text-muted">
               {sent.step === "extract"
                 ? "Sent through Firebase AI Logic with App Check, together with the JSON response schema. Only the masked OCR text of the results table — no image, no report header or footer, identity data replaced by placeholders."
                 : "Sent through Firebase AI Logic with App Check, together with the JSON response schema. No image, OCR text or identity data is included."}

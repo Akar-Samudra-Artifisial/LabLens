@@ -1,30 +1,15 @@
 import { useId, useState } from "react";
 import type { RoutingEvent, RoutingStatus } from "@/lib/ai/router";
 import type { LabTestResult } from "@/lib/ai/schemas";
+import { EyeIcon, ShieldIcon } from "./icons";
+import { LocationDot, LocationTag } from "./LocationTag";
 import { type FallbackPreview, fmtBytes, PayloadInspector, type PayloadPreview } from "./PayloadInspector";
-import { useOnlineStatus } from "./useOnlineStatus";
-
-function LaptopIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      <rect x="4" y="5" width="16" height="11" rx="1.5" />
-      <path d="M2 19h20" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function CloudIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      <path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.1 4.5 4.5 0 0 0 7 18Z" strokeLinejoin="round" />
-    </svg>
-  );
-}
+import { BTN_SECONDARY, CARD, H2 } from "./ui";
 
 const STATUS: Readonly<Record<RoutingStatus, { label: string; cls: string }>> = {
-  ok: { label: "OK", cls: "text-emerald-800 dark:text-emerald-300" },
-  error: { label: "Failed", cls: "text-red-700 dark:text-red-400" },
-  blocked: { label: "Blocked before sending", cls: "text-red-700 dark:text-red-400" },
+  ok: { label: "OK", cls: "border-ok/40 bg-ok-soft text-ok-ink" },
+  error: { label: "Failed", cls: "border-danger/50 bg-danger-soft text-danger-ink" },
+  blocked: { label: "Blocked before sending", cls: "border-danger/50 bg-danger-soft text-danger-ink" },
 };
 
 const STEP_LABEL: Readonly<Record<RoutingEvent["step"], string>> = { extract: "Read report", explain: "Explain results" };
@@ -40,24 +25,79 @@ function stagesText(ev: RoutingEvent): string | null {
     .join(" · ");
 }
 
-function OnlineIndicator() {
-  const online = useOnlineStatus();
-  return (
-    <span className="inline-flex items-center gap-1.5 text-xs" role="status" data-testid="online-status">
-      <span aria-hidden="true" className={`size-2 rounded-full ${online ? "bg-emerald-600" : "bg-zinc-400"}`} />
-      {online ? "Online" : "Offline — cloud steps unavailable"}
-    </span>
-  );
-}
+type Tone = "neutral" | "device" | "good" | "bad";
 
-function Stat({ value, label, testId }: { value: string; label: string; testId?: string }) {
+const TONE: Readonly<Record<Tone, string>> = {
+  neutral: "border-line bg-surface",
+  device: "border-device/40 bg-device-soft",
+  good: "border-ok/40 bg-ok-soft",
+  bad: "border-danger/50 bg-danger-soft",
+};
+
+function Stat({ value, label, testId, tone = "neutral" }: { value: string; label: string; testId?: string; tone?: Tone }) {
   return (
-    <div className="rounded-md border border-zinc-200 px-3 py-2 dark:border-zinc-800">
-      <dt className="text-xs text-zinc-600 dark:text-zinc-400">{label}</dt>
-      <dd className="font-mono text-lg font-semibold" data-testid={testId}>
+    <div className={`rounded-control border px-3 py-2.5 ${TONE[tone]}`}>
+      <dt className="text-xs text-muted">{label}</dt>
+      <dd className="mt-0.5 font-mono text-xl font-semibold tabular-nums" data-testid={testId}>
         {value}
       </dd>
     </div>
+  );
+}
+
+/** Angka ringkas dari event routing (dipakai panel lengkap & strip ringkas mobile). */
+export function routingTotals(events: readonly RoutingEvent[]) {
+  const sentEvents = events.filter((e) => e.bytesSent > 0);
+  return {
+    sentEvents,
+    bytesSent: sentEvents.reduce((n, e) => n + e.bytesSent, 0),
+    piiInPayloads: sentEvents.reduce((n, e) => n + e.piiSent, 0),
+    blocked: events.filter((e) => e.status === "blocked").length,
+    deviceSteps: events.filter(onDevice).length,
+    cloudSteps: events.filter((e) => e.location === "in_cloud").length,
+  };
+}
+
+/**
+ * Strip ringkas untuk layar sempit: panel lengkap jatuh di bawah konten di mobile, jadi angka privasi utama
+ * ditampilkan lebih awal. Tanpa data-testid statistik agar tidak bentrok dengan panel lengkap.
+ */
+export const ROUTING_PANEL_ID = "routing-transparency";
+
+export function RoutingSummary({ events, piiDetectedLocal }: { events: readonly RoutingEvent[]; piiDetectedLocal: number | null }) {
+  const panelId = ROUTING_PANEL_ID;
+  const t = routingTotals(events);
+  const items: readonly [string, string, Tone][] = [
+    ["PII found on device", piiDetectedLocal === null ? "–" : String(piiDetectedLocal), piiDetectedLocal ? "device" : "neutral"],
+    ["PII in cloud payloads", String(t.piiInPayloads), t.piiInPayloads > 0 ? "bad" : "good"],
+    ["Sent to cloud", fmtBytes(t.bytesSent), "neutral"],
+  ];
+  return (
+    <section aria-labelledby="routing-summary-heading" className={`${CARD} flex flex-col gap-3 p-4`} data-testid="routing-summary">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="routing-summary-heading" className={`${H2} flex items-center gap-2`}>
+          <span className="text-device-ink">
+            <ShieldIcon size={18} />
+          </span>
+          Privacy at a glance
+        </h2>
+        <a href={`#${panelId}`} className="rounded text-xs font-medium text-cloud-ink underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
+          Full timeline
+        </a>
+      </div>
+      <dl className="grid grid-cols-3 gap-2">
+        {items.map(([label, value, tone]) => (
+          <div key={label} className={`rounded-control border px-2.5 py-2 ${TONE[tone]}`}>
+            <dt className="text-[11px] leading-tight text-muted">{label}</dt>
+            <dd className="mt-0.5 font-mono text-base font-semibold tabular-nums">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="flex flex-wrap gap-1.5">
+        <LocationTag where="device" label={`On-device steps: ${t.deviceSteps}`} />
+        <LocationTag where="cloud" label={`Cloud steps: ${t.cloudSteps}`} />
+      </div>
+    </section>
   );
 }
 
@@ -72,41 +112,51 @@ interface RoutingPanelProps {
 }
 
 /**
- * US-6/US-10: timeline on-device vs cloud, ringkasan guard PII, inspector payload, status online.
+ * US-6/US-10: timeline on-device vs cloud, ringkasan guard PII, inspector payload.
  * Framing jujur: guard memblokir payload ber-PII sebelum request, jadi "PII in cloud payloads" adalah hasil re-check guard
  * atas teks yang dikirim (bukan pengukuran independen); jumlah payload yang DIBLOKIR ditampilkan terpisah.
  */
 export function RoutingPanel({ events, piiDetectedLocal, preview, rows, fallback }: RoutingPanelProps) {
   const [inspecting, setInspecting] = useState(false);
   const inspectorId = useId();
-  const sentEvents = events.filter((e) => e.bytesSent > 0);
-  const bytesSent = sentEvents.reduce((n, e) => n + e.bytesSent, 0);
-  const piiInPayloads = sentEvents.reduce((n, e) => n + e.piiSent, 0);
-  const blocked = events.filter((e) => e.status === "blocked").length;
+  const { sentEvents, bytesSent, piiInPayloads, blocked } = routingTotals(events);
   const lastSent = [...events].reverse().find((e) => e.payload)?.payload ?? null;
   const last = events.at(-1);
 
   return (
-    <section aria-labelledby="routing-heading" className="flex flex-col gap-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800" data-testid="routing-panel">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="routing-heading" className="font-semibold">
+    <section id={ROUTING_PANEL_ID} aria-labelledby="routing-heading" className={`${CARD} flex scroll-mt-4 flex-col gap-5 p-4 sm:p-5`} data-testid="routing-panel">
+      <div className="flex flex-col gap-2">
+        <h2 id="routing-heading" className={`${H2} flex items-center gap-2`}>
+          <span className="text-device-ink">
+            <ShieldIcon size={18} />
+          </span>
           Routing transparency
         </h2>
-        <OnlineIndicator />
+        <p className="text-xs text-muted">Where each AI step ran, and exactly what left this device.</p>
+        <div className="flex flex-wrap gap-1.5">
+          <span className="sr-only">Legend:</span>
+          <LocationTag where="device" label="On-device · OCR, masking, Gemini Nano" />
+          <LocationTag where="cloud" label="Cloud · Gemini via Firebase AI Logic" />
+        </div>
       </div>
 
       <div className="flex flex-col gap-2">
         <dl className="grid grid-cols-2 gap-2">
-          <Stat value={piiDetectedLocal === null ? "–" : String(piiDetectedLocal)} label="PII found on device" testId="pii-local" />
-          <Stat value={String(piiInPayloads)} label="PII in cloud payloads" testId="pii-in-payloads" />
+          <Stat
+            value={piiDetectedLocal === null ? "–" : String(piiDetectedLocal)}
+            label="PII found on device"
+            testId="pii-local"
+            tone={piiDetectedLocal ? "device" : "neutral"}
+          />
+          <Stat value={String(piiInPayloads)} label="PII in cloud payloads" testId="pii-in-payloads" tone={piiInPayloads > 0 ? "bad" : "good"} />
           <Stat
             value={fmtBytes(bytesSent)}
             label={`Sent to cloud (${sentEvents.length} request${sentEvents.length === 1 ? "" : "s"})`}
             testId="bytes-sent"
           />
-          <Stat value={String(blocked)} label="Payloads blocked by guard" testId="payloads-blocked" />
+          <Stat value={String(blocked)} label="Payloads blocked by guard" testId="payloads-blocked" tone={blocked > 0 ? "bad" : "neutral"} />
         </dl>
-        <p className="text-xs text-zinc-700 dark:text-zinc-300" data-testid="guard-summary">
+        <p className="text-xs leading-relaxed text-muted" data-testid="guard-summary">
           {sentEvents.length === 0
             ? "Nothing has been sent to the cloud yet. Identity data found on this device stays here."
             : `Every cloud payload (${fmtBytes(bytesSent)} in total) passed the PII guard before sending; the same guard re-checked the exact text that was sent.`}
@@ -119,35 +169,41 @@ export function RoutingPanel({ events, piiDetectedLocal, preview, rows, fallback
       </p>
 
       <div>
-        <h3 className="text-sm font-medium">Timeline</h3>
+        <h3 className="text-sm font-semibold">Timeline</h3>
         {events.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">No steps yet. Reading the report runs on this device.</p>
+          <p className="mt-2 rounded-control border border-dashed border-line-strong p-3 text-sm text-muted">
+            No steps yet. Reading the report runs on this device; each step will appear here with its latency and bytes sent.
+          </p>
         ) : (
-          <ol className="mt-2 flex flex-col" data-testid="routing-timeline">
+          <ol className="mt-3 flex flex-col" data-testid="routing-timeline">
             {events.map((ev, i) => {
               const local = onDevice(ev);
               const stages = stagesText(ev);
               return (
-                <li key={ev.id} className="relative flex gap-3 pb-4 last:pb-0" data-step={ev.step} data-location={ev.location} data-status={ev.status}>
-                  {i < events.length - 1 && <span aria-hidden="true" className="absolute top-8 bottom-0 left-[15px] w-px bg-zinc-200 dark:bg-zinc-800" />}
-                  <span
-                    className={`flex size-8 shrink-0 items-center justify-center rounded-full border ${
-                      local ? "border-emerald-400 text-emerald-800 dark:text-emerald-300" : "border-sky-400 text-sky-800 dark:text-sky-300"
-                    }`}
-                  >
-                    {local ? <LaptopIcon /> : <CloudIcon />}
-                  </span>
+                <li
+                  key={ev.id}
+                  className="relative flex gap-3 pb-4 last:pb-0 motion-safe:animate-enter"
+                  data-step={ev.step}
+                  data-location={ev.location}
+                  data-status={ev.status}
+                >
+                  {i < events.length - 1 && <span aria-hidden="true" className="absolute top-9 bottom-1 left-[15px] w-px bg-line-strong" />}
+                  <LocationDot where={local ? "device" : "cloud"} />
                   <div className="min-w-0 flex-1 text-sm">
-                    <p className="font-medium">
-                      {STEP_LABEL[ev.step]} · {local ? "On-device (Gemini Nano)" : ev.location === "in_cloud" ? "Cloud (Gemini)" : "Unknown"}
+                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium">
+                      {STEP_LABEL[ev.step]}
+                      <span className={`text-xs ${local ? "text-device-ink" : "text-cloud-ink"}`}>
+                        {local ? "On-device (Gemini Nano)" : ev.location === "in_cloud" ? "Cloud (Gemini)" : "Unknown"}
+                      </span>
                     </p>
-                    <p className="text-xs text-zinc-700 dark:text-zinc-300">
-                      <span className={`font-medium ${STATUS[ev.status].cls}`}>{STATUS[ev.status].label}</span> · {ev.latencyMs.toLocaleString("en-US")} ms ·{" "}
-                      {ev.bytesSent > 0 ? `${fmtBytes(ev.bytesSent)} sent, ${ev.piiSent} PII` : "0 B left the device"} ·{" "}
+                    <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+                      <span className={`rounded-full border px-1.5 py-px font-medium ${STATUS[ev.status].cls}`}>{STATUS[ev.status].label}</span>
+                      <span className="font-mono tabular-nums">{ev.latencyMs.toLocaleString("en-US")} ms</span>
+                      <span>{ev.bytesSent > 0 ? `${fmtBytes(ev.bytesSent)} sent, ${ev.piiSent} PII` : "0 B left the device"}</span>
                       <time dateTime={new Date(ev.at).toISOString()}>{new Date(ev.at).toLocaleTimeString("en-US")}</time>
                     </p>
-                    {stages && <p className="mt-0.5 font-mono text-[11px] text-zinc-600 dark:text-zinc-400">{stages}</p>}
-                    {ev.error && <p className="mt-0.5 break-words text-xs text-red-700 dark:text-red-400">{ev.error}</p>}
+                    {stages && <p className="mt-1 font-mono text-[11px] text-muted">{stages}</p>}
+                    {ev.error && <p className="mt-1 break-words text-xs text-danger-ink">{ev.error}</p>}
                   </div>
                 </li>
               );
@@ -162,11 +218,12 @@ export function RoutingPanel({ events, piiDetectedLocal, preview, rows, fallback
           aria-expanded={inspecting}
           aria-controls={inspectorId}
           onClick={() => setInspecting((v) => !v)}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:border-zinc-700 dark:hover:bg-zinc-900 dark:focus-visible:outline-zinc-100"
+          className={`${BTN_SECONDARY} w-full`}
         >
+          <EyeIcon size={16} />
           {inspecting ? "Hide cloud payload" : "Inspect cloud payload"}
         </button>
-        <div id={inspectorId} hidden={!inspecting} className="mt-3">
+        <div id={inspectorId} hidden={!inspecting} className="mt-4">
           {inspecting && <PayloadInspector preview={preview} sent={lastSent} rows={rows} fallback={fallback} />}
         </div>
       </div>

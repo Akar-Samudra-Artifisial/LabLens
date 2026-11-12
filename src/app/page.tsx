@@ -1,17 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CriticalBanner } from "@/components/CriticalBanner";
-import { ExplanationView } from "@/components/ExplanationView";
-import { FlagBadge } from "@/components/FlagBadge";
-import { MedicalDisclaimer } from "@/components/MedicalDisclaimer";
+import { AppHeader } from "@/components/AppHeader";
+import { ExplainCard } from "@/components/home/ExplainCard";
+import { BADGE_TONE, RedactedCard } from "@/components/home/RedactedCard";
+import { ResultsCard } from "@/components/home/ResultsCard";
+import type { BusyMode, ExplainState, Metrics, OcrView } from "@/components/home/types";
+import { UploadCard } from "@/components/home/UploadCard";
+import { DeviceIcon } from "@/components/icons";
+import type { InferenceLocation } from "@/components/LocationTag";
 import type { FallbackPreview, PayloadPreview } from "@/components/PayloadInspector";
-import { RoutingPanel } from "@/components/RoutingPanel";
+import { RoutingPanel, RoutingSummary } from "@/components/RoutingPanel";
+import { type StepItem, Stepper, type StepStatus } from "@/components/Stepper";
+import { CALLOUT, CARD, MUTED } from "@/components/ui";
 import { warmUpOnDeviceModel } from "@/lib/ai/models";
 import { ON_DEVICE_CREATE_OPTIONS, promptApi } from "@/lib/ai/prompt-api";
 import {
-  CLOUD_EXTRACT_TIMEOUT_MS,
-  EXTRACT_TIMEOUT_MS,
   type ExtractStage,
   explainInCloud,
   extractInCloud,
@@ -22,7 +26,7 @@ import {
   recordExtractBlocked,
   subscribeRouting,
 } from "@/lib/ai/router";
-import { EXPLAIN_LANGUAGES, type ExplainLanguage, type ExplanationResult, type LabExtraction, type LabTestResult } from "@/lib/ai/schemas";
+import { type ExplainLanguage, type LabExtraction, type LabTestResult } from "@/lib/ai/schemas";
 import { runOcr, warmUpOcr } from "@/lib/ocr/tesseract";
 import {
   buildCloudPayload,
@@ -34,9 +38,7 @@ import {
   type OcrPage,
   type PiiDetection,
   PiiLeakError,
-  type PiiSpanKind,
   redactText,
-  SPAN_KIND_LABEL,
 } from "@/lib/pii";
 import { redactedImageBlob } from "@/lib/pii/redact-image";
 import { createLatestGate } from "@/lib/latest-gate";
@@ -62,12 +64,6 @@ function nanoReason(availability: string): string {
   return `the Prompt API returned an error (${availability.replace(/^error: /, "")}).`;
 }
 
-/** Laporan sintetis (data fiktif) di public/samples — sama dengan fixture spike. */
-const SAMPLES = [
-  { file: "a-id-hematologi.png", label: "Try sample (ID hematology)" },
-  { file: "b-us-lipid.png", label: "Try sample (US lipid)" },
-] as const;
-
 /** Hasil OCR + aturan PII dokumen aktif (hanya di memori tab ini) — sumber teks fallback cloud. */
 interface OcrDoc {
   page: OcrPage;
@@ -80,60 +76,6 @@ const fallbackLockMessage = (e: unknown) =>
   e instanceof PiiLeakError
     ? `The PII guard still found identity data in the masked text (${e.kinds.join(", ")}). Cloud extraction is locked for this document.`
     : errText(e);
-
-const STAGE_LABEL: Record<ExtractStage, string> = {
-  prep: "preparing image…",
-  session: "preparing model…",
-  prefill: "reading image…",
-  generate: "writing results…",
-};
-
-const LANGUAGE_LABEL: Record<ExplainLanguage, string> = { en: "English", id: "Bahasa Indonesia" };
-
-const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:focus-visible:outline-zinc-100";
-const BTN_PRIMARY = `rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300 ${FOCUS}`;
-const BTN_SECONDARY = `rounded-md border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:hover:bg-zinc-900 ${FOCUS}`;
-const CARD = "rounded-lg border border-zinc-200 p-4 dark:border-zinc-800";
-const MUTED = "text-zinc-600 dark:text-zinc-400";
-
-interface OcrView {
-  ms: number;
-  text: string;
-  imageUrl: string;
-  counts: Partial<Record<PiiSpanKind, number>>;
-  /** Batas tabel tidak ditemukan → cloud dinonaktifkan (fail-closed). */
-  reviewRequired: boolean;
-}
-
-/** Waktu (ms sejak klik) — juga dibaca runner spike lewat data-metrics. */
-interface Metrics {
-  ocrMs?: number;
-  firstRowMs?: number;
-  totalMs?: number;
-  rows?: number;
-}
-
-/** Baris yang lolos allowlist + guard dan dikirim (atau sedang dikirim) ke cloud. */
-interface Sent {
-  rows: number;
-  dropped: number;
-}
-
-type ExplainState =
-  | { status: "idle" }
-  | { status: "blocked"; kinds: readonly string[] }
-  /** Payload tidak disusun (mis. tidak ada baris lolos allowlist) — tidak ada request. */
-  | { status: "unsent"; message: string }
-  | { status: "running"; sent: Sent }
-  | {
-      status: "done";
-      sent: Sent;
-      explanation: ExplanationResult;
-      rows: readonly LabTestResult[];
-      sentIndices: readonly number[];
-      language: ExplainLanguage;
-    }
-  | { status: "error"; sent: Sent; message: string };
 
 export default function Home() {
   const [availability, setAvailability] = useState("checking…");
@@ -163,7 +105,7 @@ export default function Home() {
   /** Ditawarkan bila Nano tidak tersedia/gagal: pratinjau teks termasking atau alasan kunci. */
   const [fallback, setFallback] = useState<FallbackPreview | null>(null);
   /** device = OCR + Nano; ocr = hanya OCR + aturan PII (Nano tidak tersedia); cloud = fallback ekstraksi cloud. */
-  const [busyMode, setBusyMode] = useState<"device" | "ocr" | "cloud">("device");
+  const [busyMode, setBusyMode] = useState<BusyMode>("device");
   /** Teks termasking dokumen aktif sudah dikirim untuk ekstraksi cloud (untuk badge). */
   const [extractedInCloud, setExtractedInCloud] = useState(false);
   const nanoKnown = availability !== "checking…";
@@ -448,337 +390,166 @@ export default function Home() {
 
   const badge =
     explain.status === "blocked"
-      ? { cls: "bg-red-700", text: "Blocked — PII detected, nothing was sent" }
+      ? { tone: BADGE_TONE.danger, text: "Blocked — PII detected, nothing was sent" }
       : explain.status === "error"
-        ? { cls: "bg-amber-700", text: `Guard passed (${explain.sent.rows} rows, no PII) — cloud request failed` }
+        ? { tone: BADGE_TONE.warn, text: `Guard passed (${explain.sent.rows} rows, no PII) — cloud request failed` }
         : explain.status === "running" || explain.status === "done"
           ? {
-              cls: "bg-emerald-800",
+              tone: BADGE_TONE.ok,
               text: `Guard passed — ${explain.sent.rows} rows without PII sent to the cloud${explain.sent.dropped ? ` (${explain.sent.dropped} kept local)` : ""}`,
             }
           : cloudLocked && (ocr || ocrError)
-            ? { cls: "bg-amber-700", text: "Cloud disabled — review manually" }
+            ? { tone: BADGE_TONE.warn, text: "Cloud disabled — review manually" }
             : extractedInCloud
-              ? { cls: "bg-emerald-800", text: "Guard passed — masked table text (no image) sent for cloud extraction" }
-              : { cls: "bg-zinc-600", text: "Nothing sent to the cloud yet" };
+              ? { tone: BADGE_TONE.ok, text: "Guard passed — masked table text (no image) sent for cloud extraction" }
+              : { tone: BADGE_TONE.neutral, text: "Nothing sent to the cloud yet" };
 
-  const fmtS = (ms?: number) => (ms === undefined ? "–" : `${(ms / 1000).toFixed(1)} s`);
   const explainDisabled = !result || cloudLocked || busy || explain.status === "running";
+  // Alasan terlihat untuk tombol disabled (bukan hanya title); "running" sudah punya status sendiri.
+  const explainDisabledReason = !result
+    ? "Extract the results table first."
+    : cloudLocked
+      ? "Cloud is disabled for this document because the local PII check is incomplete."
+      : busy
+        ? "Wait for the current step to finish."
+        : null;
+
+  // Progres alur untuk stepper (hanya presentasi; diturunkan dari state yang sudah ada).
+  const extractWhere: InferenceLocation = busyMode === "cloud" || extractedInCloud ? "cloud" : "device";
+  const readStatus: StepStatus = ocrError
+    ? "error"
+    : ocr
+      ? ocr.reviewRequired
+        ? "attention"
+        : "done"
+      : busy && busyMode !== "cloud"
+        ? "active"
+        : "todo";
+  const extractStatus: StepStatus = result
+    ? "done"
+    : busy && busyMode !== "ocr"
+      ? "active"
+      : fallback
+        ? fallback.state === "ready"
+          ? "attention"
+          : "error"
+        : error
+          ? "error"
+          : "todo";
+  const explainStatus: StepStatus =
+    explain.status === "done" ? "done" : explain.status === "running" ? "active" : explain.status === "idle" ? "todo" : "error";
+  const steps: StepItem[] = [
+    { key: "upload", title: "Upload", where: "device", detail: file ? (sample ? "Sample loaded" : "Image selected") : "Photo or sample", status: file ? "done" : "active" },
+    { key: "read", title: "Read & mask", where: "device", detail: "Local OCR + PII masking", status: readStatus },
+    {
+      key: "extract",
+      title: "Extract",
+      where: extractWhere,
+      detail: extractWhere === "cloud" ? "Private cloud, masked text" : "Gemini Nano on-device",
+      status: extractStatus,
+    },
+    { key: "explain", title: "Explain", where: "cloud", detail: "Gemini, anonymous rows", status: explainStatus },
+  ];
+  const showIntro = !ocr && !busy && rows.length === 0;
+  const extracting = busy && busyMode !== "ocr";
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl gap-6 p-4 font-sans sm:p-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
-      <div className="flex min-w-0 flex-col gap-6">
-        <header className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold">LabLens</h1>
-          <p className={`text-sm ${MUTED}`}>
-            Your lab report is read on this device. Only anonymous test rows go to the cloud for a plain-language explanation.
-          </p>
-          <p className="text-xs">
-            Gemini Nano: <code className="font-mono">{availability}</code>
-            {warm && (
-              <>
-                {" "}
-                · model: <code className="font-mono">{warm}</code>
-              </>
-            )}
-          </p>
-          {nanoKnown && !nanoReady && (
-            <div
-              className="mt-2 rounded-md border border-sky-300 bg-sky-50 p-3 text-sm text-sky-950 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100"
-              role="status"
-              data-testid="nano-banner"
-            >
-              <p className="font-medium">On-device AI is not ready in this browser — LabLens still works.</p>
-              <p className="mt-1">
-                Why: {nanoReason(availability)} On-device extraction needs desktop Chrome 139 or newer with Gemini Nano (built-in
-                Prompt API).
+    <div className="flex min-h-full flex-col">
+      <AppHeader availability={availability} warm={warm} />
+
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+        <div className={`${CARD} p-2`}>
+          <Stepper steps={steps} />
+        </div>
+
+        {/* Mobile/tablet: panel routing lengkap ada di bawah konten, jadi angka privasi utama tampil lebih awal. */}
+        <div className="lg:hidden">
+          <RoutingSummary events={events} piiDetectedLocal={piiDetectedLocal} />
+        </div>
+
+        {nanoKnown && !nanoReady && (
+          <div className={`${CALLOUT.info} flex gap-3`} role="status" data-testid="nano-banner">
+            <span className="mt-0.5 shrink-0 text-device-ink">
+              <DeviceIcon size={18} />
+            </span>
+            <div className="flex flex-col gap-1">
+              <p className="font-semibold">On-device AI is not ready in this browser — LabLens still works.</p>
+              <p className={MUTED}>
+                Why: {nanoReason(availability)} On-device extraction needs desktop Chrome 139 or newer with Gemini Nano (built-in Prompt API).
               </p>
-              <p className="mt-1">
-                Fallback: OCR and identity masking still run on this device. You can then choose <strong>private cloud extraction</strong>
-                : only the masked text of the results table is sent — never the image, the report header or footer.
+              <p className={MUTED}>
+                Fallback: OCR and identity masking still run on this device. You can then choose <strong className="text-ink">private cloud extraction</strong>: only
+                the masked text of the results table is sent — never the image, the report header or footer.
               </p>
             </div>
-          )}
-        </header>
+          </div>
+        )}
 
-        <section aria-labelledby="upload-heading" className={`${CARD} flex flex-col gap-3`}>
-          <h2 id="upload-heading" className="font-medium">
-            1 · Read report on device
-          </h2>
-          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Sample reports">
-            {SAMPLES.map((s) => (
-              <button key={s.file} type="button" className={BTN_SECONDARY} disabled={busy || sampleLoading} onClick={() => onSample(s.file)}>
-                {s.label}
-              </button>
-            ))}
-            <span className={`text-xs ${MUTED}`}>Synthetic reports with fictitious patients — no real data.</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              <span>Lab report image (JPEG or PNG)</span>
-              <input
-                key={inputKey}
-                type="file"
-                accept="image/jpeg,image/png"
-                disabled={busy}
-                className={`text-sm file:mr-3 file:rounded-md file:border file:border-zinc-300 file:bg-transparent file:px-3 file:py-1.5 file:text-sm dark:file:border-zinc-700 ${FOCUS}`}
-                onChange={(e) => {
-                  sampleGate.invalidate();
-                  setSampleLoading(false);
-                  setFile(e.target.files?.[0] ?? null);
-                  setSample(null);
-                }}
-              />
-            </label>
-            {nanoReady ? (
-              <button type="button" className={BTN_PRIMARY} disabled={!file || busy || explain.status === "running"} onClick={() => onExtract(true)}>
-                {busy ? "Reading…" : "Extract (on-device)"}
-              </button>
-            ) : (
-              <>
-                <button type="button" className={BTN_PRIMARY} disabled={!file || busy || explain.status === "running"} onClick={() => onExtract(false)}>
-                  {busy && busyMode === "ocr" ? "Reading…" : "Read & mask on device"}
-                </button>
-                {availability === "downloadable" ? (
-                  <button type="button" className={BTN_SECONDARY} disabled={!file || busy || explain.status === "running"} onClick={() => onExtract(true)}>
-                    Download Gemini Nano &amp; extract on-device
-                  </button>
-                ) : (
-                  <button type="button" className={BTN_SECONDARY} disabled title="Gemini Nano is not available in this browser">
-                    Extract (on-device) — needs Gemini Nano
-                  </button>
-                )}
-              </>
-            )}
-            {busy && (
-              <button type="button" className={BTN_SECONDARY} onClick={() => abortRef.current?.abort()}>
-                Cancel
-              </button>
-            )}
-          </div>
-          {file && (
-            <p className={`text-xs ${MUTED}`} data-testid="selected-file">
-              Selected: <span className="font-mono">{file.name}</span>
-              {sample && " (synthetic sample, fictitious data)"}
-            </p>
-          )}
-          {sampleError && (
-            <p className="text-sm text-red-700 dark:text-red-400" role="alert">
-              {sampleError}
-            </p>
-          )}
-          {nanoReady && (
-            <label className="flex items-center gap-2 text-xs">
-              <input type="checkbox" checked={ocrContext} disabled={busy} onChange={(e) => setOcrContext(e.target.checked)} />
-              give redacted OCR text to Nano as context (experimental)
-            </label>
-          )}
-          <p className="text-sm" aria-live="polite">
-            {busy &&
-              (busyMode === "cloud" ? (
-                <>
-                  Private cloud extraction (masked text only)… {elapsedS} s / max {CLOUD_EXTRACT_TIMEOUT_MS / 1000} s
-                </>
-              ) : busyMode === "ocr" ? (
-                <>Local OCR and identity masking… {elapsedS} s</>
-              ) : (
-                <>
-                  {ocr ? "OCR done · " : "Local OCR… · "}
-                  {stage ? STAGE_LABEL[stage] : "starting…"} {elapsedS} s / max {EXTRACT_TIMEOUT_MS / 1000} s
-                </>
-              ))}
-          </p>
-          <p className={`font-mono text-xs ${MUTED}`} data-testid="metrics" data-metrics={JSON.stringify(metrics)}>
-            OCR+redact {fmtS(metrics.ocrMs)} · first row {fmtS(metrics.firstRowMs)} · total {fmtS(metrics.totalMs)}
-          </p>
-          {error && (
-            <p className="text-sm text-red-700 dark:text-red-400" role="alert">
-              {error}
-            </p>
-          )}
-          {ocrError && (
-            <p className="text-sm text-red-700 dark:text-red-400" role="alert">
-              {ocrError}
-            </p>
-          )}
-          {fallback && !result && (
-            <div className="flex flex-col gap-2 rounded-md border border-sky-300 p-3 dark:border-sky-800" data-testid="cloud-fallback">
-              <p className="text-sm font-medium">Private cloud extraction (fallback)</p>
-              {fallback.state === "locked" ? (
-                <p className="text-sm text-amber-800 dark:text-amber-300" role="alert" data-testid="fallback-locked">
-                  {fallback.reason} Nothing was sent.
-                </p>
-              ) : (
-                <>
-                  <p className="text-sm">
-                    Sends only the masked OCR text of the results table ({fallback.payload.lines} lines, {fallback.payload.bytes.toLocaleString("en-US")} B)
-                    to Gemini in the cloud through Firebase AI Logic. No image, no report header or footer; identity data is replaced by
-                    placeholders and the PII guard re-checks the text before sending.
-                  </p>
-                  <details className="text-xs">
-                    <summary className={`cursor-pointer ${FOCUS}`}>Show exactly what will be sent</summary>
-                    <pre
-                      tabIndex={0}
-                      aria-label="Masked text for cloud extraction"
-                      className={`mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-zinc-100 p-2 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 ${FOCUS}`}
-                      data-testid="fallback-text"
-                    >
-                      {fallback.payload.text}
-                    </pre>
-                  </details>
-                  <div>
-                    <button type="button" className={BTN_PRIMARY} disabled={busy || explain.status === "running"} onClick={onCloudExtract}>
-                      {busy && busyMode === "cloud" ? "Extracting…" : "Extract via private cloud (masked text)"}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </section>
+        <main className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start xl:grid-cols-[minmax(0,1fr)_26rem]">
+          <div className="flex min-w-0 flex-col gap-6">
+            <UploadCard
+              file={file}
+              sample={sample}
+              inputKey={inputKey}
+              sampleLoading={sampleLoading}
+              sampleError={sampleError}
+              availability={availability}
+              nanoReady={nanoReady}
+              busy={busy}
+              busyMode={busyMode}
+              stage={stage}
+              elapsedS={elapsedS}
+              ocrDone={!!ocr}
+              rowCount={rows.length}
+              explainRunning={explain.status === "running"}
+              ocrContext={ocrContext}
+              error={error}
+              ocrError={ocrError}
+              fallback={fallback}
+              hasResult={!!result}
+              showIntro={showIntro}
+              onFileChange={(f) => {
+                sampleGate.invalidate();
+                setSampleLoading(false);
+                setFile(f);
+                setSample(null);
+              }}
+              onSample={onSample}
+              onExtract={onExtract}
+              onCancel={() => abortRef.current?.abort()}
+              onOcrContextChange={setOcrContext}
+              onCloudExtract={onCloudExtract}
+            />
 
-        <section className={CARD} data-testid="redacted-panel" aria-labelledby="redacted-heading">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 id="redacted-heading" className="font-medium">
-              Redacted on device
-            </h2>
-            <span className={`rounded px-2 py-0.5 text-xs text-white ${badge.cls}`} data-testid="cloud-badge">
-              {badge.text}
-            </span>
-          </div>
-          {ocr?.reviewRequired && (
-            <p className="mt-2 text-sm text-amber-800 dark:text-amber-300" role="alert">
-              The results table boundary was not found, so the report header (name, ID number, etc.) cannot be confirmed as
-              redacted. Cloud explanation is disabled for this document — check the redacted image manually.
-            </p>
-          )}
-          {!ocr && <p className={`mt-2 text-sm ${MUTED}`}>{busy ? "OCR and PII rules running on this device…" : "No document yet."}</p>}
-          {ocr && (
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
-              {/* eslint-disable-next-line @next/next/no-img-element -- blob: URL lokal, bukan aset Next */}
-              <img src={ocr.imageUrl} alt="Preview of the redacted report image" className="w-full rounded border border-zinc-200 dark:border-zinc-800" />
-              <div className="flex flex-col gap-2 text-xs">
-                <p>
-                  OCR + redaction: {ocr.ms} ms · PII by kind:{" "}
-                  {Object.entries(ocr.counts)
-                    .map(([k, n]) => `${SPAN_KIND_LABEL[k as PiiSpanKind]} ${n}`)
-                    .join(" · ") || "none"}
-                </p>
-                <pre
-                  tabIndex={0}
-                  aria-label="Redacted OCR text"
-                  className={`max-h-72 overflow-auto rounded bg-zinc-100 p-2 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 ${FOCUS}`}
-                  data-testid="redacted-text"
-                >
-                  {ocr.text}
-                </pre>
-              </div>
-            </div>
-          )}
-        </section>
+            <RedactedCard ocr={ocr} reading={busy && busyMode !== "cloud"} badge={badge} />
 
-        <section aria-labelledby="results-heading" className={`${CARD} flex flex-col gap-3`}>
-          <h2 id="results-heading" className="font-medium">
-            Results {busy && rows.length > 0 && <span className={`text-sm font-normal ${MUTED}`}>(streaming…)</span>}
-          </h2>
-          {/* Dari flag lokal — tampil apa pun status cloud (terkunci/offline/gagal); ExplanationView tidak mengulangnya. */}
-          <CriticalBanner rows={rows} />
-          {partial && (
-            <p className="text-sm text-amber-800 dark:text-amber-300" data-testid="partial">
-              Partial: {partial}
-            </p>
-          )}
-          <div className="overflow-x-auto">
-            <table className={`w-full text-left text-sm ${partial ? "italic opacity-60" : ""}`} data-testid="rows">
-              <caption className="sr-only">Extracted lab results with locally computed flags</caption>
-              <thead className={`text-xs ${MUTED}`}>
-                <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                  <th scope="col" className="py-1.5 pr-3 font-medium">Test</th>
-                  <th scope="col" className="py-1.5 pr-3 font-medium">Result</th>
-                  <th scope="col" className="py-1.5 pr-3 font-medium">Unit</th>
-                  <th scope="col" className="py-1.5 pr-3 font-medium">Reference</th>
-                  <th scope="col" className="py-1.5 font-medium">Flag</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className={`py-2 ${MUTED}`}>
-                      No rows yet.
-                    </td>
-                  </tr>
-                )}
-                {rows.map((r, i) => (
-                  <tr key={i} className="border-b border-zinc-100 last:border-0 dark:border-zinc-900">
-                    <td className="py-1.5 pr-3">{r.testName}</td>
-                    <td className="py-1.5 pr-3 font-mono">{r.value}</td>
-                    <td className="py-1.5 pr-3">{r.unit}</td>
-                    <td className="py-1.5 pr-3">{r.referenceRange}</td>
-                    <td className="py-1.5">
-                      <FlagBadge flag={r.flag} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {rows.length > 0 && <MedicalDisclaimer />}
-        </section>
+            <ResultsCard rows={rows} metrics={metrics} partial={partial} where={extractWhere} busy={busy} extracting={extracting} />
 
-        <section aria-labelledby="explain-heading" className={`${CARD} flex flex-col gap-3`}>
-          <h2 id="explain-heading" className="font-medium">
-            2 · Explain in plain language (cloud)
-          </h2>
-          <fieldset className="flex flex-wrap items-center gap-3 text-sm" disabled={explain.status === "running"}>
-            <legend className="sr-only">Explanation language</legend>
-            <span aria-hidden="true" className={MUTED}>
-              Language:
-            </span>
-            {EXPLAIN_LANGUAGES.map((l) => (
-              <label key={l} className="flex items-center gap-1.5">
-                <input type="radio" name="explain-language" value={l} checked={language === l} onChange={() => setLanguage(l)} />
-                {LANGUAGE_LABEL[l]}
-              </label>
-            ))}
-          </fieldset>
-          <div className="flex flex-wrap items-center gap-3">
-            <button type="button" className={BTN_PRIMARY} disabled={explainDisabled} onClick={onExplain}>
-              {explain.status === "running" ? "Explaining…" : "Explain (cloud)"}
-            </button>
-            <span className={`text-xs ${MUTED}`}>
-              Only rows with a known test name and a plain value/unit/range are sent, and the PII guard checks them again.
-              Open “Inspect cloud payload” to see the exact text first.
-            </span>
-          </div>
-          <div aria-live="polite">
-            {explain.status === "running" && <p className={`text-sm ${MUTED}`}>Asking Gemini in the cloud…</p>}
-            {explain.status === "blocked" && (
-              <p className="text-sm text-red-700 dark:text-red-400" role="alert">
-                Blocked before sending: the payload still contained identity data ({explain.kinds.join(", ")}). Nothing left the device.
-              </p>
-            )}
-            {(explain.status === "error" || explain.status === "unsent") && (
-              <p className="text-sm text-red-700 dark:text-red-400" role="alert">
-                {explain.message}
-              </p>
-            )}
-          </div>
-          {explain.status === "done" && (
-            <ExplanationView explanation={explain.explanation} rows={explain.rows} sentIndices={explain.sentIndices} language={explain.language} />
-          )}
-        </section>
+            <ExplainCard
+              explain={explain}
+              language={language}
+              onLanguageChange={setLanguage}
+              disabled={explainDisabled}
+              disabledReason={explainDisabledReason}
+              hasResult={!!result}
+              onExplain={onExplain}
+            />
 
-        <details className={CARD}>
-          <summary className={`cursor-pointer text-sm font-medium ${FOCUS}`}>Extraction JSON (debug)</summary>
-          <pre className="mt-2 overflow-auto rounded bg-zinc-100 p-3 text-xs text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100" data-testid="result-json">
-            {result ? JSON.stringify(result, null, 2) : "—"}
-          </pre>
-        </details>
+            <details className={`${CARD} px-4 py-3 sm:px-5`}>
+              <summary className={`cursor-pointer rounded text-sm font-medium ${MUTED} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus`}>
+                Extraction JSON (debug)
+              </summary>
+              <pre className="mt-3 overflow-auto whitespace-pre-wrap break-words rounded-control border border-line bg-surface-2 p-3 font-mono text-xs leading-relaxed" data-testid="result-json">
+                {result ? JSON.stringify(result, null, 2) : "—"}
+              </pre>
+            </details>
+          </div>
+
+          <aside className="min-w-0 lg:sticky lg:top-6">
+            <RoutingPanel events={events} piiDetectedLocal={piiDetectedLocal} preview={preview} rows={rows} fallback={fallback} />
+          </aside>
+        </main>
       </div>
-
-      <aside className="min-w-0 lg:sticky lg:top-8">
-        <RoutingPanel events={events} piiDetectedLocal={piiDetectedLocal} preview={preview} rows={rows} fallback={fallback} />
-      </aside>
-    </main>
+    </div>
   );
 }

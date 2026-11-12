@@ -1,26 +1,160 @@
 @import "tailwindcss";
 
+/*
+ * LabLens design tokens. Satu bahasa visual untuk lokasi inferensi:
+ * - device (teal)  = berjalan di perangkat (OCR, masking PII, Gemini Nano)
+ * - cloud (indigo) = Gemini di cloud lewat Firebase AI Logic
+ * Warna flag lab (ok/warn/danger) sengaja terpisah dari warna lokasi.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --surface-2: #f0f3f7;
+  --ink: #0f172a;
+  --muted: #4b5568;
+  --line: #e1e6ee;
+  --line-strong: #c8d0dc;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --device: #0f766e;
+  --device-soft: #e7f5f2;
+  --device-ink: #115e59;
+  --on-device: #ffffff;
+
+  --cloud: #4f46e5;
+  --cloud-soft: #eef0fe;
+  --cloud-ink: #3730a3;
+  --on-cloud: #ffffff;
+
+  --ok: #15803d;
+  --ok-soft: #eaf7ee;
+  --ok-ink: #14532d;
+  --warn: #b45309;
+  --warn-soft: #fdf4e3;
+  --warn-ink: #7c2d12;
+  --low: #0369a1;
+  --low-soft: #e8f3fa;
+  --low-ink: #0c4a6e;
+  --danger: #b91c1c;
+  --danger-soft: #fdecec;
+  --danger-ink: #7f1d1d;
+
+  --focus: #0f172a;
+  --elev-card: 0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.04);
+
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #0a0e15;
+    --surface: #111722;
+    --surface-2: #19212f;
+    --ink: #e6e9ef;
+    --muted: #a0aab9;
+    --line: #243042;
+    --line-strong: #344257;
+
+    --device: #2dd4bf;
+    --device-soft: #0d2826;
+    --device-ink: #7ee8d9;
+    --on-device: #042f2b;
+
+    --cloud: #8b93f9;
+    --cloud-soft: #1b1f3e;
+    --cloud-ink: #b7bdfd;
+    --on-cloud: #0d1036;
+
+    --ok: #4ade80;
+    --ok-soft: #0f2618;
+    --ok-ink: #a7f3c0;
+    --warn: #fbbf24;
+    --warn-soft: #2a1f08;
+    --warn-ink: #fde3a0;
+    --low: #38bdf8;
+    --low-soft: #0a2433;
+    --low-ink: #bae6fd;
+    --danger: #f87171;
+    --danger-soft: #2c1214;
+    --danger-ink: #fecaca;
+
+    --focus: #e6e9ef;
+    --elev-card: 0 1px 2px rgb(0 0 0 / 0.4);
+
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --color-device: var(--device);
+  --color-device-soft: var(--device-soft);
+  --color-device-ink: var(--device-ink);
+  --color-on-device: var(--on-device);
+  --color-cloud: var(--cloud);
+  --color-cloud-soft: var(--cloud-soft);
+  --color-cloud-ink: var(--cloud-ink);
+  --color-on-cloud: var(--on-cloud);
+
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-ok-ink: var(--ok-ink);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-warn-ink: var(--warn-ink);
+  --color-low: var(--low);
+  --color-low-soft: var(--low-soft);
+  --color-low-ink: var(--low-ink);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-ink: var(--danger-ink);
+  --color-focus: var(--focus);
+
+  --radius-card: 0.875rem;
+  --radius-control: 0.5rem;
+  --shadow-card: var(--elev-card);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --animate-enter: enter 220ms ease-out both;
+
+  @keyframes enter {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection {
+  background: var(--device-soft);
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
