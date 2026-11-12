@@ -13,6 +13,8 @@ export interface StepItem {
   where: InferenceLocation;
   detail: string;
   status: StepStatus;
+  /** Label status khusus (mis. "Needs consent" untuk fallback cloud); default STATUS_TEXT[status]. */
+  statusText?: string;
 }
 
 /** Apa yang sudah menyeberangi batas privasi (dari event routing). */
@@ -50,7 +52,8 @@ function nodeClass(s: StepItem): string {
       // Menunggu input: garis tepi warna lokasi, tanpa glow/animasi (tidak ada yang berjalan).
       return device ? "border-device/60 border-dashed bg-surface text-device-ink" : "border-cloud/60 border-dashed bg-surface text-cloud-ink";
     case "attention":
-      return "border-warn/60 bg-warn-soft text-warn-ink";
+      // Di cloud = menunggu persetujuan pengguna untuk fallback → nada cloud (indigo), bukan peringatan.
+      return device ? "border-warn/60 bg-warn-soft text-warn-ink" : "border-cloud/70 border-dashed bg-cloud-soft text-cloud-ink";
     case "blocked":
       return "border-danger/60 bg-danger-soft text-danger-ink";
     case "error":
@@ -199,7 +202,15 @@ export function Pipeline({ steps, crossing }: { steps: readonly StepItem[]; cros
                     className={`motion-decor absolute -inset-1.5 rounded-[1.25rem] border-2 animate-breathe ${s.where === "device" ? "border-device" : "border-cloud"}`}
                   />
                 )}
-                {s.status === "error" ? <AlertIcon size={20} /> : s.status === "blocked" ? <LockIcon size={20} /> : <Icon size={20} />}
+                {s.status === "error" ? (
+                  <AlertIcon size={20} />
+                ) : s.status === "blocked" ? (
+                  <LockIcon size={20} />
+                ) : s.status === "attention" && s.where === "cloud" ? (
+                  <CloudIcon size={20} />
+                ) : (
+                  <Icon size={20} />
+                )}
                 {s.status === "done" && (
                   <span className="absolute -right-1.5 -bottom-1.5 grid size-5 place-items-center rounded-full border-2 border-surface bg-ok text-surface motion-safe:animate-pop">
                     <CheckIcon size={11} strokeWidth={3} />
@@ -209,11 +220,14 @@ export function Pipeline({ steps, crossing }: { steps: readonly StepItem[]; cros
               <div className="min-w-0 pt-0.5 md:pt-0">
                 <p className="text-sm leading-tight font-semibold">
                   {s.title}
-                  <span className="sr-only"> — {STATUS_TEXT[s.status]}</span>
+                  <span className="sr-only"> — {s.statusText ?? STATUS_TEXT[s.status]}</span>
                 </p>
                 <p className={`mt-1 text-xs leading-snug ${s.where === "device" ? "text-device-ink" : "text-cloud-ink"}`}>{s.detail}</p>
-                <p aria-hidden="true" className={`mt-1 font-mono text-[11px] tracking-wide uppercase ${STATUS_TONE[s.status]}`}>
-                  {STATUS_TEXT[s.status]}
+                <p
+                  aria-hidden="true"
+                  className={`mt-1 font-mono text-[11px] tracking-wide uppercase ${s.status === "attention" && s.where === "cloud" ? "text-cloud-ink" : STATUS_TONE[s.status]}`}
+                >
+                  {s.statusText ?? STATUS_TEXT[s.status]}
                 </p>
               </div>
             </li>

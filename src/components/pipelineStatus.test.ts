@@ -68,7 +68,7 @@ describe("pipelineSteps (status pipeline per fase)", () => {
 
   it("ekstraksi cloud gagal → Extract error di lokasi cloud (bukan Nano / Needs you)", () => {
     const steps = pipelineSteps({ ...base, hasFile: true, ocr: ocrOk, busyMode: "cloud", fallback: "ready", error: true });
-    expect(steps[2]).toMatchObject({ status: "error", where: "cloud", detail: "Private cloud failed — retry" });
+    expect(steps[2]).toMatchObject({ status: "error", where: "cloud", detail: "Private cloud · masked text", statusText: "Failed" });
     // Baris parsial sempat diterima (extractedInCloud) lalu gagal → tetap cloud + error.
     expect(pipelineSteps({ ...base, hasFile: true, ocr: ocrOk, busyMode: "cloud", fallback: "ready", error: true, extractedInCloud: true })[2]).toMatchObject({
       status: "error",
@@ -78,7 +78,55 @@ describe("pipelineSteps (status pipeline per fase)", () => {
 
   it("cloud sukses → done di cloud; Nano gagal (belum ke cloud) → tetap device + fallback attention", () => {
     expect(pipelineSteps({ ...base, hasFile: true, ocr: ocrOk, busyMode: "cloud", hasResult: true, extractedInCloud: true })[2]).toMatchObject({ status: "done", where: "cloud" });
-    expect(pipelineSteps({ ...base, hasFile: true, ocr: ocrOk, busyMode: "device", fallback: "ready", error: true })[2]).toMatchObject({ status: "attention", where: "device" });
+    // Nano gagal → fallback ditawarkan: jalur berikutnya cloud, menunggu persetujuan.
+    expect(pipelineSteps({ ...base, hasFile: true, ocr: ocrOk, busyMode: "device", fallback: "ready", error: true })[2]).toMatchObject({
+      status: "attention",
+      where: "cloud",
+      statusText: "Needs consent",
+    });
+  });
+
+  describe("Nano tidak tersedia → jalur fallback private cloud", () => {
+    const noNano = { ...base, hasFile: true, ocr: ocrOk, busyMode: "ocr" } as const;
+    const cloudDetail = "Private cloud · masked text";
+
+    it("belum consent → Needs consent di cloud (bukan Gemini Nano / Needs you)", () => {
+      const s = pipelineSteps({ ...noNano, fallback: "ready" })[2];
+      expect(s).toMatchObject({ status: "attention", where: "cloud", detail: cloudDetail, statusText: "Needs consent" });
+      expect(s.detail).not.toMatch(/Nano/);
+    });
+
+    it("cloud running → active di cloud", () => {
+      const s = pipelineSteps({ ...noNano, busyMode: "cloud", busy: true, fallback: "ready" })[2];
+      expect(s).toMatchObject({ status: "active", where: "cloud", detail: cloudDetail });
+      expect(s.statusText).toBeUndefined();
+    });
+
+    it("cloud done → done di cloud", () => {
+      expect(pipelineSteps({ ...noNano, busyMode: "cloud", fallback: "ready", hasResult: true, extractedInCloud: true })[2]).toMatchObject({
+        status: "done",
+        where: "cloud",
+        detail: cloudDetail,
+      });
+    });
+
+    it("cloud failed → error berlabel Failed di cloud", () => {
+      expect(pipelineSteps({ ...noNano, busyMode: "cloud", fallback: "ready", error: true })[2]).toMatchObject({
+        status: "error",
+        where: "cloud",
+        statusText: "Failed",
+      });
+    });
+
+    it("cloud lock → blocked di cloud", () => {
+      const s = pipelineSteps({ ...noNano, ocr: { reviewRequired: true }, fallback: "locked" })[2];
+      expect(s).toMatchObject({ status: "blocked", where: "cloud", detail: cloudDetail });
+      expect(s.statusText).toBeUndefined(); // label default "Blocked"
+    });
+
+    it("Nano tersedia tanpa fallback → tetap Gemini Nano on-device", () => {
+      expect(pipelineSteps({ ...base, hasFile: true, ocr: ocrOk, hasResult: true })[2]).toMatchObject({ where: "device", detail: "Gemini Nano on-device" });
+    });
   });
 
   it("hasil ada → Explain ready, atau blocked bila cloud terkunci", () => {

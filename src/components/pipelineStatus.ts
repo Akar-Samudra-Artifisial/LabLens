@@ -94,7 +94,10 @@ export function pipelineSteps(s: PipelineInput): StepItem[] {
                   ? "ready"
                   : "todo";
 
-  const extractWhere: InferenceLocation = cloudTried || s.extractedInCloud ? "cloud" : "device";
+  // Fallback ditawarkan/terkunci (Nano tak tersedia atau gagal) → langkah berikutnya adalah jalur private cloud.
+  const extractWhere: InferenceLocation = cloudTried || s.extractedInCloud || s.fallback !== null ? "cloud" : "device";
+  const extractStatusText =
+    extractWhere !== "cloud" ? undefined : extract === "attention" ? "Needs consent" : extract === "error" ? "Failed" : undefined;
   return [
     { key: "upload", title: "Upload", where: "device", detail: s.hasFile ? (s.sample ? "Sample loaded" : "Image selected") : "Photo or sample", status: upload },
     { key: "read", title: "Read & mask", where: "device", detail: "Local OCR + PII masking", status: read },
@@ -104,15 +107,14 @@ export function pipelineSteps(s: PipelineInput): StepItem[] {
       where: extractWhere,
       detail:
         extractWhere === "cloud"
-          ? cloudFailed
-            ? "Private cloud failed — retry"
-            : "Private cloud, masked text"
+          ? "Private cloud · masked text"
           : parallel
             ? "Gemini Nano, in parallel with OCR"
             : waitsForOcr
               ? "Gemini Nano, waits for OCR text"
               : "Gemini Nano on-device",
       status: extract,
+      ...(extractStatusText && { statusText: extractStatusText }),
     },
     { key: "explain", title: "Explain", where: "cloud", detail: "Gemini, anonymous rows", status: explain },
   ];
