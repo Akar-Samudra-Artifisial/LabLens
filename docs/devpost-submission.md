@@ -49,7 +49,7 @@ Two features make the routing visible. The **Routing transparency** panel shows 
 ### Challenges we ran into
 
 - **SDK session lifecycle.** The hybrid SDK creates a new on-device session per call and has no way to abort an on-device request. We cache the model instance, warm it up on page load, and add our own timeout and cancel button. A cancelled Nano run still finishes in the background, which is a known SDK limitation.
-- **Gemini Nano latency.** Output generation dominates. Total extraction takes ≈ 20–31 s depending on the machine. A leaner schema (flags computed in code, not by the model) and streaming rows bring the first row to ≈ 3.6–5.2 s, so the user sees progress early.
+- **Gemini Nano latency.** Output generation dominates. Total extraction takes ≈ 20–31 s in benchmark runs, and up to ≈ 36 s in the live app, depending on the machine. A leaner schema (flags computed in code, not by the model) and streaming rows brought the first row to ≈ 3.6–5.2 s in benchmark runs. In the live app, timed from the Extract click (so it includes Gemini Nano reading the image), the first row appears after ≈ 17 s, and the remaining rows stream in after that.
 - **PII in free OCR text.** OCR output is messy: labels and values get split, and numbers look alike. Asking the model to find PII was not reliable enough, so masking is deterministic and fail-closed. Cloud payloads also pass a per-line allowlist and a final guard.
 - **App Check provider.** reCAPTCHA v3 is deprecated for App Check, so we moved to reCAPTCHA Enterprise (score-based key) with debug tokens for local development.
 
@@ -96,7 +96,7 @@ Access is free, and you don't need an account or your own data.
 
 1. Use **Chrome Desktop 139+** with Gemini Nano (Prompt API) available. To check, open `chrome://on-device-internals`, or look at the LabLens header badge: it should read `Gemini Nano: available`. If it reads `downloadable`, click **Download Gemini Nano & extract on-device** and wait for the download.
 2. Open <https://lablens-hybridai-bt.web.app> and click **Try sample (ID hematology)** or **Try sample (US lipid)**.
-3. Click **Extract (on-device)**. The redacted image and masked text appear first, then rows stream into the Results table. Expect ≈ 20–31 s in total, depending on the machine.
+3. Click **Extract (on-device)**. The redacted image and masked text appear first, then rows stream into the Results table. Expect ≈ 20–36 s in total, depending on the machine.
 4. Choose **English** or **Bahasa Indonesia** and click **Explain (cloud)**.
 
 ### B. Without Gemini Nano (private cloud fallback)

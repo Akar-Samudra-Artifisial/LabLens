@@ -130,7 +130,7 @@ node spike/run-nano.mjs app 3           # real app on localhost:3000 (run `pnpm 
 | Metric | Result |
 |---|---|
 | PII recall / leaks (fixtures a, b, c) | 100% recall, 0 leaks |
-| On-device extraction, fixture a | 14/14 rows; first row ≈ 3.6–5.2 s; total ≈ 20–31 s (depends on the machine) |
+| On-device extraction, fixture a | 14/14 rows; benchmark runs: first row ≈ 3.6–5.2 s, total ≈ 20–31 s. Live app (timed from the Extract click, so it includes Gemini Nano reading the image): first row ≈ 17 s, total ≈ 36 s. Depends on the machine. |
 | Private cloud fallback extraction, fixture a | 14/14 rows in ≈ 4.6 s |
 | Explain payload | ≈ 2.2 KB, no image, no PII |
 | Rotated/blurred photo (fixture c) accuracy | ≈ 61% (known limitation) |
@@ -158,7 +158,7 @@ node spike/run-nano.mjs app 3           # real app on localhost:3000 (run `pnpm 
 ## Limitations
 
 - **Photo quality:** on a rotated, blurred, low-contrast photo (fixture c), extraction accuracy is ≈ 61%. Clean scans and screenshots work best.
-- **Gemini Nano latency:** on-device extraction takes ≈ 20–31 s in total. Streaming shows the first row after a few seconds.
+- **Gemini Nano latency:** on-device extraction takes ≈ 20–31 s in benchmark runs and up to ≈ 36 s in the live app, depending on the machine. Gemini Nano first reads the image (≈ 15 s in the live app), then rows stream in one by one; the "First row" figure is timed from the Extract click and includes that image read.
 - **No real abort for Nano:** a timeout or cancel stops LabLens from waiting, but the model keeps running in the background (SDK limitation).
 - **Split record numbers:** a medical record number split into pieces of ≤3 digits across lines cannot be told apart from lab values.
 - **Desktop Chrome only for on-device:** other browsers use the private cloud fallback.
