@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Profil Chrome spike Gemini Nano (berisi JS bawaan Chrome).
+    "spike/.chrome-profile/**",
+    // Aset OCR tesseract.js hasil salinan (pnpm ocr:assets), bukan kode proyek.
+    "public/tesseract/**",
   ]),
 ]);
 

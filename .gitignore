@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +40,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# aset OCR (disalin dari node_modules oleh `pnpm ocr:assets` / postinstall)
+/public/tesseract/
+
+# spike Gemini Nano (profil Chrome terpisah)
+/spike/.chrome-profile/
+
+# vitest cache
+/.vitest/
