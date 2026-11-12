@@ -1,0 +1,2087 @@
+{
+  "version": "Chrome/157.0.8103.40",
+  "runs": [
+    {
+      "variant": "base",
+      "fixture": "a-id-hematologi",
+      "run": 1,
+      "at": "2026-11-10T00:28:15.367Z",
+      "ok": true,
+      "text": "{\"results\":[{\"testName\":\"Hemoglobin\",\"value\":\"10.2\",\"unit\":\"g/dL\",\"referenceRange\":\"12.0 - 16.0\",\"flag\":\"normal\"},{\"testName\":\"Leukosit\",\"value\":\"13.800\",\"unit\":\"/µL\",\"referenceRange\":\"4.000 - 10.000\",\"flag\":\"high\"},{\"testName\":\"Eritrosit\",\"value\":\"3.9\",\"unit\":\"ljuta/µL\",\"referenceRange\":\"4.0 - 5.2\",\"flag\":\"low\"},{\"testName\":\"Hematokrit\",\"value\":\"31.5\",\"unit\":\"%\",\"referenceRange\":\"36 - 46\",\"flag\":\"low\"},{\"testName\":\"Trombosit\",\"value\":\"452.000\",\"unit\":\"/µL\",\"referenceRange\":\"150.000 - 400.000\",\"flag\":\"high\"},{\"testName\":\"MCV\",\"value\":\"80.8\",\"unit\":\"fl\",\"referenceRange\":\"80 - 100\",\"flag\":\"normal\"},{\"testName\":\"MCH\",\"value\":\"26.2\",\"unit\":\"pg\",\"referenceRange\":\"27 - 34\",\"flag\":\"low\"},{\"testName\":\"MCHC\",\"value\":\"32.4\",\"unit\":\"g/dL\",\"referenceRange\":\"32 - 36\",\"flag\":\"normal\"},{\"testName\":\"LED\",\"value\":\"28\",\"unit\":\"mm/jam\",\"referenceRange\":\"0 - 20\",\"flag\":\"high\"},{\"testName\":\"Eosinofil\",\"value\":\"2\",\"unit\":\"%\",\"referenceRange\":\"1 - 3\",\"flag\":\"normal\"},{\"testName\":\"Basofil\",\"value\":\"0\",\"unit\":\"%\",\"referenceRange\":\"0 - 1\",\"flag\":\"normal\"},{\"testName\":\"Neutrofil Segmen\",\"value\":\"78\",\"unit\":\"%\",\"referenceRange\":\"50 - 70\",\"flag\":\"high\"},{\"testName\":\"Limfosit\",\"value\":\"15\",\"unit\":\"%\",\"referenceRange\":\"20 - 40\",\"flag\":\"normal\"},{\"testName\":\"Monosit\",\"value\":\"5\",\"unit\":\"%\",\"referenceRange\":\"2 - 8\",\"flag\":\"normal\"}],\"maskedPii\":[{\"kind\":\"name\",\"placeholder\":\"[NAMA]\"},{\"kind\":\"nik\",\"placeholder\":\"[NIK]\"},{\"kind\":\"medical_record_number\",\"placeholder\":\"[NOMOR REKAM MEDIS]\"},{\"kind\":\"date_of_birth\",\"placeholder\":\"14-08-1991\"},{\"kind\":\"address\",\"placeholder\":\"Jl. Genanga Gg. 3 No. 27, RT 04/RW 09, Kel. Sukamaju, Bandung\"},{\"kind\":\"phone\",\"placeholder\":\"0812-3456-7890\"}\n]\n\n}",
+      "image": "1338x990→1338x990",
+      "outChars": 1681,
+      "decodeMs": 171,
+      "createMs": 15828,
+      "prefillMs": 7120,
+      "genMs": 26567,
+      "promptMs": 33687,
+      "totalMs": 49686,
+      "score": {
+        "summary": {
+          "jsonValid": true,
+          "rowsOut": 14,
+          "rowsTruth": 14,
+          "rowsMatched": 14,
+          "extraRows": 0,
+          "fieldAcc": 0.957,
+          "perField": {
+            "testName": 1,
+            "value": 1,
+            "unit": 0.929,
+            "referenceRange": 1,
+            "flag": 0.857
+          },
+          "piiKindRecall": 1,
+          "piiKindsMissing": [],
+          "piiLeaks": [
+            "date_of_birth",
+            "address",
+            "phone"
+          ]
+        },
+        "errors": [
+          {
+            "test": "Hemoglobin",
+            "bad": {
+              "flag": {
+                "got": "normal",
+                "want": "low"
+              }
+            }
+          },
+          {
+            "test": "Eritrosit",
+            "bad": {
+              "unit": {
+                "got": "ljuta/µL",
+                "want": "juta/µL"
+              }
+            }
+          },
+          {
+            "test": "Limfosit",
+            "bad": {
+              "flag": {
+                "got": "normal",
+                "want": "low"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "variant": "base",
+      "fixture": "a-id-hematologi",
+      "run": 2,
+      "at": "2026-11-10T00:29:01.485Z",
+      "ok": true,
+      "text": "{\"results\": [{\"testName\": \"Hemoglobin\", \"value\": \"10.2\", \"unit\": \"g/dL\", \"referenceRange\": \"12.0 - 16.0\", \"flag\": \"low\"}, {\"testName\": \"Leukosit\", \"value\": \"13.800\", \"unit\": \"/µL\", \"referenceRange\": \"4.000 - 10.000\", \"flag\": \"high\"}, {\"testName\": \"Eritrosit\", \"value\": \"3.9\", \"unit\": \"juta/µL\", \"referenceRange\": \"4.0 - 5.2\", \"flag\": \"low\"}, {\"testName\": \"Hematocrit\", \"value\": \"31.5\", \"unit\": \"%\", \"referenceRange\": \"36 - 46\", \"flag\": \"high\"}, {\"testName\": \"Trombosit\", \"value\": \"452.000\", \"unit\": \"/µL\", \"referenceRange\": \"150.000 - 400.000\", \"flag\": \"high\"}, {\"testName\": \"MCV\", \"value\": \"80.8\", \"unit\": \"fl\", \"referenceRange\": \"80 - 100\", \"flag\": \"normal\"}, {\"testName\": \"MCH\", \"value\": \"26.2\", \"unit\": \"pg\", \"referenceRange\": \"27 - 34\", \"flag\": \"low\"}, {\"testName\": \"MCHC\", \"value\": \"32.4\", \"unit\": \"g/dL\", \"referenceRange\": \"32 - 36\", \"flag\": \"normal\"}, {\"testName\": \"LED\", \"value\": \"28\", \"unit\": \"mm/jam\", \"referenceRange\": \"0 - 20\", \"flag\": \"high\"}, {\"testName\": \"Eosinofil\", \"value\": \"2\", \"unit\": \"%\", \"referenceRange\": \"1 - 3\", \"flag\": \"normal\"}, {\"testName\": \"Basofil\", \"value\": \"0\", \"unit\": \"%\", \"referenceRange\": \"0 - 1\", \"flag\": \"normal\"}, {\"testName\": \"Neutrofil Segmen\", \"value\": \"78\", \"unit\": \"%\", \"referenceRange\": \"50 - 70\", \"flag\": \"high\"}, {\"testName\": \"Limfosit\", \"value\": \"15\", \"unit\": \"%\", \"referenceRange\": \"20 - 40\", \"flag\": \"normal\"}, {\"testName\": \"Monosit\", \"value\": \"5\", \"unit\": \"%\", \"referenceRange\": \"2 - 8\", \"flag\": \"normal\"}] , \"maskedPii\": [{\"kind\": \"name\", \"placeholder\": \"[NAMA]\"}, {\"kind\": \"nik\", \"placeholder\": \"[NIK]\"}, {\"kind\": \"medical_record_number\", \"placeholder\": \"[NOMOR_REKAM_MEDIS]\"}, {\"kind\": \"date_of_birth\", \"placeholder\": \"[TANGGAL_LAHIR]\"}, {\"kind\": \"address\", \"placeholder\": \"[ALAMAT]\"}, {\"kind\": \"phone\", \"placeholder\": \"[TELEPON]\"} ]}",
+      "image": "1338x990→1338x990",
+      "outChars": 1789,
+      "decodeMs": 551,
+      "createMs": 213,
+      "prefillMs": 15410,
+      "genMs": 29136,
+      "promptMs": 44546,
+      "totalMs": 45309,
+      "score": {
+        "summary": {
+          "jsonValid": true,
+          "rowsOut": 14,
+          "rowsTruth": 14,
+          "rowsMatched": 13,
+          "extraRows": 1,
+          "fieldAcc": 0.914,
+          "perField": {
+            "testName": 0.929,
+            "value": 0.929,
+            "unit": 0.929,
+            "referenceRange": 0.929,
+            "flag": 0.857
+          },
+          "piiKindRecall": 1,
+          "piiKindsMissing": [],
+          "piiLeaks": []
+        },
+        "errors": [
+          {
+            "test": "Hematokrit",
+            "missing": true
+          },
+          {
+            "test": "Limfosit",
+            "bad": {
+              "flag": {
+                "got": "normal",
+                "want": "low"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "variant": "base",
+      "fixture": "a-id-hematologi",
+      "run": 3,
+      "at": "2026-11-10T00:29:33.562Z",
+      "ok": true,
+      "text": "{\"results\": [{\"testName\": \"Hemoglobin\", \"value\": \"10.2\", \"unit\": \"g/dL\", \"referenceRange\": \"12.0 - 16.0\", \"flag\": \"normal\"}, {\"testName\": \"Leukosit\", \"value\": \"13.800\", \"unit\": \"/µL\", \"referenceRange\": \"4.000 - 10.000\", \"flag\": \"high\"}, {\"testName\": \"Eritrosit\", \"value\": \"3.9\", \"unit\": \"juta/µL\", \"referenceRange\": \"4.0 - 5.2\", \"flag\": \"low\"}, {\"testName\": \"Hematokrit\", \"value\": \"31.5\", \"unit\": \"%\", \"referenceRange\": \"36 - 46\", \"flag\": \"normal\"}, {\"testName\": \"Trombosit\", \"value\": \"452.000\", \"unit\": \"/µL\", \"referenceRange\": \"150.000 - 400.000\", \"flag\": \"high\"}, {\"testName\": \"MCV\", \"value\": \"80.8\", \"unit\": \"fl\", \"referenceRange\": \"80 - 100\", \"flag\": \"normal\"}, {\"testName\": \"MCH\", \"value\": \"26.2\", \"unit\": \"pg\", \"referenceRange\": \"27 - 34\", \"flag\": \"low\"}, {\"testName\": \"MCHC\", \"value\": \"32.4\", \"unit\": \"g/dL\", \"referenceRange\": \"32 - 36\", \"flag\": \"normal\"}, {\"testName\": \"LED\", \"value\": \"28\", \"unit\": \"mm/jam\", \"referenceRange\": \"0 - 20\", \"flag\": \"high\"}, {\"testName\": \"Eosinofil\", \"value\": \"2\", \"unit\": \"%\", \"referenceRange\": \"1 - 3\", \"flag\": \"normal\"}, {\"testName\": \"Basofil\", \"value\": \"0\", \"unit\": \"%\", \"referenceRange\": \"0 - 1\", \"flag\": \"normal\"}, {\"testName\": \"Neutrofil Segmen\", \"value\": \"78\", \"unit\": \"%\", \"referenceRange\": \"50 - 70\", \"flag\": \"normal\"}, {\"testName\": \"Limfosit\", \"value\": \"15\", \"unit\": \"%\", \"referenceRange\": \"20 - 40\", \"flag\": \"normal\"}, {\"testName\": \"Monosit\", \"value\": \"5\", \"unit\": \"%\", \"referenceRange\": \"2 - 8\", \"flag\": \"normal\"}]\n\n\n\n\n\n\n\n  ,\"maskedPii\": [{\"kind\": \"name\", \"placeholder\": \"[NAMA]}\"}, {\"kind\": \"other\", \"placeholder\": \"[NAMA]\"}]\n}",
+      "image": "1338x990→1338x990",
+      "outChars": 1579,
+      "decodeMs": 562,
+      "createMs": 108,
+      "prefillMs": 8614,
+      "genMs": 22481,
+      "promptMs": 31096,
+      "totalMs": 31766,
+      "score": {
+        "summary": {
+          "jsonValid": true,
+          "rowsOut": 14,
+          "rowsTruth": 14,
+          "rowsMatched": 14,
+          "extraRows": 0,
+          "fieldAcc": 0.943,
+          "perField": {
+            "testName": 1,
+            "value": 1,
+            "unit": 1,
+            "referenceRange": 1,
+            "flag": 0.714
+          },
+          "piiKindRecall": 0.167,
+          "piiKindsMissing": [
+            "nik",
+            "medical_record_number",
+            "date_of_birth",
+            "address",
+            "phone"
+          ],
+          "piiLeaks": []
+        },
+        "errors": [
+          {
+            "test": "Hemoglobin",
+            "bad": {
+              "flag": {
+                "got": "normal",
+                "want": "low"
+              }
+            }
+          },
+          {
+            "test": "Hematokrit",
+            "bad": {
+              "flag": {
+                "got": "normal",
+                "want": "low"
+              }
+            }
+          },
+          {
+            "test": "Neutrofil Segmen",
+            "bad": {
+              "flag": {
+                "got": "normal",
+                "want": "high"
+              }
+            }
+          },
+          {
+            "test": "Limfosit",
+            "bad": {
+              "flag": {
+                "got": "normal",
+                "want": "low"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "variant": "base",
+      "fixture": "c-id-hematologi-foto",
+      "run": 1,
+      "at": "2026-11-10T00:29:59.281Z",
+      "ok": true,
+      "text": "{\"results\":[{\"testName\": \"Hemoglobin\", \"value\": \"10.2\", \"unit\": \"g/dL\", \"referenceRange\": \"12.0 - 16.0\", \"flag\": \"normal\"}, {\"testName\": \"Leukosit\", \"value\": \"13.800\", \"unit\": \"µL\", \"referenceRange\": \"4.000 - 10.000\", \"flag\": \"high\"}, {\"testName\": \"Eritrosit\", \"value\": \"3.9\", \"unit\": \"µL\", \"referenceRange\": \"4.000 - 10.000\", \"flag\": \"low\"}, {\"testName\": \"Hematokrit\", \"value\": \"31.5\", \"unit\": \"µta/L\", \"referenceRange\": \"4.0 - 5.2\", \"flag\": \"low\"}, {\"testName\": \"Trombosit\", \"value\": \"452.000\", \"unit\": \"%\", \"referenceRange\": \"36 - 46\", \"flag\": \"high\"}, {\"testName\": \"MCV\", \"value\": \"80.8\", \"unit\": \"µL\", \"referenceRange\": \"150.000 - 400.000\", \"flag\": \"normal\"}, {\"testName\": \"MCH\", \"value\": \"26.2\", \"unit\": \"fl\", \"referenceRange\": \"80 - 100\", \"flag\": \"low\"}, {\"testName\": \"MCHC\", \"value\": \"32.4\", \"unit\": \"g/dL\", \"referenceRange\": \"27 - 34\", \"flag\": \"low\"}, {\"testName\": \"LED\", \"value\": \"28\", \"unit\": \"g/dL\", \"referenceRange\": \"32 - 36\", \"flag\": \"normal\"}, {\"testName\": \"Eosinofil\", \"value\": \"2\", \"unit\": \"mm/jam\", \"referenceRange\": \"0 - 20\", \"flag\": \"high\"}, {\"testName\": \"Basofil\", \"value\": \"0\", \"unit\": \"%\", \"referenceRange\": \"1 - 3\", \"flag\": \"normal\"}, {\"testName\": \"Neutrofil Segmen\", \"value\": \"78\", \"unit\": \"%\", \"referenceRange\": \"0 - 1\", \"flag\": \"high\"}, {\"testName\": \"Limfosit\", \"value\": \"15\", \"unit\": \"%\", \"referenceRange\": \"50 - 70\", \"flag\": \"normal\"}, {\"testName\": \"Monosit\", \"value\": \"5\", \"unit\": \"%\", \"referenceRange\": \"2 - 8\", \"flag\": \"normal\"}],\"maskedPii\":[{\"kind\":\"name\",\"placeholder\":\"[NAMA]\"}, {\"kind\":\"nik\",\"placeholder\":\"3273015040089001\"}]}",
+      "image": "1920x990→1920x990",
+      "outChars": 1565,
+      "decodeMs": 196,
+      "createMs": 35,
+      "prefillMs": 2726,
+      "genMs": 22628,
+      "promptMs": 25354,
+      "totalMs": 25585,
+      "score": {
+        "summary": {
+          "jsonValid": true,
+          "rowsOut": 14,
+          "rowsTruth": 14,
+          "rowsMatched": 14,
+          "extraRows": 0,
+          "fieldAcc": 0.671,
+          "perField": {
+            "testName": 1,
+            "value": 1,
+            "unit": 0.5,
+            "referenceRange": 0.214,
+            "flag": 0.643
+          },
+          "piiKindRecall": 0.333,
+          "piiKindsMissing": [
+            "medical_record_number",
+            "date_of_birth",
+            "address",
+            "phone"
+          ],
+          "piiLeaks": []
+        },
+        "errors": [
+          {
+            "test": "Hemoglobin",
+            "bad": {
+              "flag": {
+                "got": "normal",
+                "want": "low"
+              }
+            }
+          },
+          {
+            "test": "Eritrosit",
+            "bad": {
+              "unit": {
+                "got": "µL",
+                "want": "juta/µL"
+              },
+              "referenceRange": {
+                "got": "4.000 - 10.000",
+                "want": "4.0 - 5.2"
+              }
+            }
+          },
+          {
+            "test": "Hematokrit",
+            "bad": {
+              "unit": {
+                "got": "µta/L",
+                "want": "%"
+              },
+              "referenceRange": {
+                "got": "4.0 - 5.2",
+                "want": "36 - 46"
+              }
+            }
+          },
+          {
+            "test": "Trombosit",
+            "bad": {
+              "unit": {
+                "got": "%",
+                "want": "/µL"
+              },
+              "referenceRange": {
+                "got": "36 - 46",
+                "want": "150.000 - 400.000"
+              }
+            }
+          },
+          {
+            "test": "MCV",
+            "bad": {
+              "unit": {
+                "got": "µL",
+                "want": "fL"
+              },
+              "referenceRange": {
+                "got": "150.000 - 400.000",
+                "want": "80 - 100"
+              }
+            }
+          },
+          {
+            "test": "MCH",
+            "bad": {
+              "unit": {
+                "got": "fl",
+                "want": "pg"
+              },
+              "referenceRange": {
+                "got": "80 - 100",
+                "want": "27 - 34"
+              }
+            }
+          },
+          {
+            "test": "MCHC",
+            "bad": {
+              "referenceRange": {
+                "got": "27 - 34",
+                "want": "32 - 36"
+              },
+              "flag": {
+                "got": "low",
+                "want": "normal"
+              }
+            }
+          },
+          {
+            "test": "LED",
+            "bad": {
+              "unit": {
+                "got": "g/dL",
+                "want": "mm/jam"
+              },
+              "referenceRange": {
+                "got": "32 - 36",
+                "want": "0 - 20"
+              },
+              "flag": {
+                "got": "normal",
+                "want": "high"
+              }
+            }
+          },
+          {
+            "test": "Eosinofil",
+            "bad": {
+              "unit": {
+                "got": "mm/jam",
+                "want": "%"
+              },
+              "referenceRange": {
+                "got": "0 - 20",
+                "want": "1 - 3"
+              },
+              "flag": {
+                "got": "high",
+                "want": "normal"
+              }
+            }
+          },
+          {
+            "test": "Basofil",
+            "bad": {
+              "referenceRange": {
+                "got": "1 - 3",
+                "want": "0 - 1"
+              }
+            }
+          },
+          {
+            "test": "Neutrofil Segmen",
+            "bad": {
+              "referenceRange": {
+                "got": "0 - 1",
+                "want": "50 - 70"
+              }
+            }
+          },
+          {
+            "test": "Limfosit",
+            "bad": {
+              "referenceRange": {
+                "got": "50 - 70",
+                "want": "20 - 40"
+              },
+              "flag": {
+                "got": "normal",
+                "want": "low"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "variant": "base",
+      "fixture": "c-id-hematologi-foto",
+      "run": 2,
+      "at": "2026-11-10T00:32:00.550Z",
+      "ok": false,
+      "error": "TimeoutError: timeout",
+      "outChars": 7985,
+      "totalMs": 120264,
+      "score": {
+        "summary": {
+          "jsonValid": false,
+          "error": "TimeoutError: timeout"
+        }
+      }
+    },
+    {
+      "variant": "base",
+      "fixture": "c-id-hematologi-foto",
+      "run": 3,
+      "at": "2026-11-10T00:32:42.195Z",
+      "ok": true,
+      "text": "{\"results\": [{\"testName\": \"Hemoglobin\", \"value\": \"10.2\", \"unit\": \"g/dL\", \"referenceRange\": \"12.0 - 16.0\", \"flag\": \"low\"}, {\"testName\": \"Leukosit\", \"value\": \"13.800\", \"unit\": \"l/µL\", \"referenceRange\": \"4.000 - 10.000\", \"flag\": \"high\"}, {\"testName\": \"Eritrosit\", \"value\": \"3.9\", \"unit\": \"µL\", \"referenceRange\": \"4.000 - 10.000\", \"flag\": \"low\"}, {\"testName\": \"Hematocrit\", \"value\": \"31.5\", \"unit\": \"/µL\", \"referenceRange\": \"4.0 - 5.2\", \"flag\": \"low\"}, {\"testName\": \"Trombosit\", \"value\": \"452.000\", \"unit\": \"l/%\", \"referenceRange\": \"36 - 46\", \"flag\": \"high\"}, {\"testName\": \"MCV\", \"value\": \"80.8\", \"unit\": \"µL\", \"referenceRange\": \"150.000 - 400.000\", \"flag\": \"normal\"}, {\"testName\": \"MCH\", \"value\": \"26.2\", \"unit\": \"fL\", \"referenceRange\": \"80 - 100\", \"flag\": \"low\"}, {\"testName\": \"MCHC\", \"value\": \"32.4\", \"unit\": \"g/dL\", \"referenceRange\": \"27 - 34\", \"flag\": \"normal\"}, {\"testName\": \"LED\", \"value\": \"28\", \"unit\": \"g/dL\", \"referenceRange\": \"32 - 36\", \"flag\": \"normal\"}, {\"testName\": \"Eosinofil\", \"value\": \"2\", \"unit\": \"mm/jam\", \"referenceRange\": \"0 - 20\", \"flag\": \"normal\"}, {\"testName\": \"Basofil\", \"value\": \"0\", \"unit\": \"%\", \"referenceRange\": \"1 - 3\", \"flag\": \"normal\"}, {\"testName\": \"Neutrofil Segmen\", \"value\": \"78\", \"unit\": \"%\", \"referenceRange\": \"0 - 1\", \"flag\": \"normal\"}, {\"testName\": \"Limfosit\", \"value\": \"15\", \"unit\": \"%\", \"referenceRange\": \"50 - 70\", \"flag\": \"normal\"}, {\"testName\": \"Monosit\", \"value\": \"5\", \"unit\": \"%\", \"referenceRange\": \"2 - 8\", \"flag\": \"normal\"}] , \"maskedPii\": [{\"kind\": \"name\", \"placeholder\": \"[NAMA]\"}, {\"kind\": \"nik\", \"placeholder\": \"[NIK]\"}, {\"kind\": \"medical_record_number\", \"placeholder\": \"[NOMOR_REKAM_MEDIS]\"}, {\"kind\": \"date_of_birth\", \"placeholder\": \"[TANGGAL_LAHIR]\"}, {\"kind\": \"address\", \"placeholder\": \"[ALAMAT]\"}, {\"kind\": \"phone\", \"placeholder\": \"[TELEPON]\"} ]}",
+      "image": "1920x990→1920x990",
+      "outChars": 1800,
+      "decodeMs": 1077,
+      "createMs": 41,
+      "prefillMs": 5038,
+      "genMs": 35373,
+      "promptMs": 40411,
+      "totalMs": 41529,
+      "score": {
+        "summary": {
+          "jsonValid": true,
+          "rowsOut": 14,
+          "rowsTruth": 14,
+          "rowsMatched": 13,
+          "extraRows": 1,
+          "fieldAcc": 0.643,
+          "perField": {
+            "testName": 0.929,
+            "value": 0.929,
+            "unit": 0.429,
+            "referenceRange": 0.214,
+            "flag": 0.714
+          },
+          "piiKindRecall": 1,
+          "piiKindsMissing": [],
+          "piiLeaks": []
+        },
+        "errors": [
+          {
+            "test": "Leukosit",
+            "bad": {
+              "unit": {
+                "got": "l/µL",
+                "want": "/µL"
+              }
+            }
+          },
+          {
+            "test": "Eritrosit",
+            "bad": {
+              "unit": {
+                "got": "µL",
+                "want": "juta/µL"
+              },
+              "referenceRange": {
+                "got": "4.000 - 10.000",
+                "want": "4.0 - 5.2"
+              }
+            }
+          },
+          {
+            "test": "Hematokrit",
+            "missing": true
+          },
+          {
+            "test": "Trombosit",
+            "bad": {
+              "unit": {
+                "got": "l/%",
+                "want": "/µL"
+              },
+              "referenceRange": {
+                "got": "36 - 46",
+                "want": "150.000 - 400.000"
+              }
+            }
+          },
+          {
+            "test": "MCV",
+            "bad": {
+              "unit": {
+                "got": "µL",
+                "want": "fL"
+              },
+              "referenceRange": {
+                "got": "150.000 - 400.000",
+                "want": "80 - 100"
+              }
+            }
+          },
+          {
+            "test": "MCH",
+            "bad": {
+              "unit": {
+                "got": "fL",
+                "want": "pg"
+              },
+              "referenceRange": {
+                "got": "80 - 100",
+                "want": "27 - 34"
+              }
+            }
+          },
+          {
+            "test": "MCHC",
+            "bad": {
+              "referenceRange": {
+                "got": "27 - 34",
+                "want": "32 - 36"
+              }
+            }
+          },
+          {
+            "test": "LED",
+            "bad": {
+              "unit": {
+                "got": "g/dL",
+                "want": "mm/jam"
+              },
+              "referenceRange": {
+                "got": "32 - 36",
+                "want": "0 - 20"
+              },
+              "flag": {
+                "got": "normal",
+                "want": "high"
+              }
+            }
+          },
+          {
+            "test": "Eosinofil",
+            "bad": {
+              "unit": {
+                "got": "mm/jam",
+                "want": "%"
+              },
+              "referenceRange": {
+                "got": "0 - 20",
+                "want": "1 - 3"
+              }
+            }
+          },
+          {
+            "test": "Basofil",
+            "bad": {
+              "referenceRange": {
+                "got": "1 - 3",
+                "want": "0 - 1"
+              }
+            }
+          },
+          {
+            "test": "Neutrofil Segmen",
+            "bad": {
+              "referenceRange": {
+                "got": "0 - 1",
+                "want": "50 - 70"
+              },
+              "flag": {
+                "got": "normal",
+                "want": "high"
+              }
+            }
+          },
+          {
+            "test": "Limfosit",
+            "bad": {
+              "referenceRange": {
+                "got": "50 - 70",
+                "want": "20 - 40"
+              },
+              "flag": {
+                "got": "normal",
+                "want": "low"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "variant": "base-1024",
+      "fixture": "a-id-hematologi",
+      "run": 1,
+      "at": "2026-11-10T00:33:38.725Z",
+      "ok": true,
+      "text": "{\"results\": [{\"testName\": \"Hemoglobin\", \"value\": \"10.2\", \"unit\": \"g/dL\", \"referenceRange\": \"12.0 - 16.0\", \"flag\": \"normal\"}, {\"testName\": \"Leukosit\", \"value\": \"13.800\", \"unit\": \"/µL\", \"referenceRange\": \"4.000 - 10.000\", \"flag\": \"high\"}, {\"testName\": \"Eritrosit\", \"value\": \"3.9\", \"unit\": \"juta/µL\", \"referenceRange\": \"4.0 - 5.2\", \"flag\": \"low\"}, {\"testName\": \"Hematocrit\", \"value\": \"31.5\", \"unit\": \"%\", \"referenceRange\": \"36 - 46\", \"flag\": \"normal\"}, {\"testName\": \"Trombosit\", \"value\": \"452.000\", \"unit\": \"/µL\", \"referenceRange\": \"150.000 - 400.000\", \"flag\": \"high\"}, {\"testName\": \"MCV\", \"value\": \"80.8\", \"unit\": \"fl\", \"referenceRange\": \"80 - 100\", \"flag\": \"normal\"}, {\"testName\": \"MCH\", \"value\": \"26.2\", \"unit\": \"pg\", \"referenceRange\": \"27 - 34\", \"flag\": \"low\"}, {\"testName\": \"MCHC\", \"value\": \"32.4\", \"unit\": \"g/dL\", \"referenceRange\": \"32 - 36\", \"flag\": \"normal\"}, {\"testName\": \"LED\", \"value\": \"28\", \"unit\": \"mm/jam\", \"referenceRange\": \"0 - 20\", \"flag\": \"high\"}, {\"testName\": \"Eosinofil\", \"value\": \"2\", \"unit\": \"%\", \"referenceRange\": \"1 - 3\", \"flag\": \"normal\"}, {\"testName\": \"Basofil\", \"value\": \"0\", \"unit\": \"%\", \"referenceRange\": \"0 - 1\", \"flag\": \"normal\"}, {\"testName\": \"Neutrofil Segmen\", \"value\": \"78\", \"unit\": \"%\", \"referenceRange\": \"50 - 70\", \"flag\": \"high\"}, {\"testName\": \"Limfosit\", \"value\": \"15\", \"unit\": \"%\", \"referenceRange\": \"20 - 40\", \"flag\": \"normal\"}, {\"testName\": \"Monosit\", \"value\": \"5\", \"unit\": \"%\", \"referenceRange\": \"2 - 8\", \"flag\": \"normal\"}] , \"maskedPii\": [{\"kind\": \"name\", \"placeholder\": \"[NAMA]\"}, {\"kind\": \"nik\", \"placeholder\": \"[NIK]\"}, {\"kind\": \"medical_record_number\", \"placeholder\": \"[NOMOR_REKAM_MEDIS]\"}, {\"kind\": \"date_of_birth\", \"placeholder\": \"[TANGGAL_LAHIR]\"}, {\"kind\": \"address\", \"placeholder\": \"[ALAMAT]\"}, {\"kind\": \"phone\", \"placeholder\": \"[TELEPON]\"}, {\"kind\": \"other\", \"placeholder\": \"[DATA_LAIN]\"}]}",
+      "image": "1338x990→1024x758",
+      "outChars": 1842,
+      "decodeMs": 25,
+      "createMs": 15020,
+      "prefillMs": 2298,
+      "genMs": 27290,
+      "promptMs": 29588,
+      "totalMs": 44633,
+      "score": {
+        "summary": {
+          "jsonValid": true,
+          "rowsOut": 14,
+          "rowsTruth": 14,
+          "rowsMatched": 13,
+          "extraRows": 1,
+          "fieldAcc": 0.9,
+          "perField": {
+            "testName": 0.929,
+            "value": 0.929,
+            "unit": 0.929,
+            "referenceRange": 0.929,
+            "flag": 0.786
+          },
+          "piiKindRecall": 1,
+          "piiKindsMissing": [],
+          "piiLeaks": []
+        },
+        "errors": [
+          {
+            "test": "Hemoglobin",
+            "bad": {
+              "flag": {
+                "got": "normal",
+                "want": "low"
+              }
+            }
+          },
+          {
+            "test": "Hematokrit",
+            "missing": true
+          },
+          {
+            "test": "Limfosit",
+            "bad": {
+              "flag": {
+                "got": "normal",
+                "want": "low"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "variant": "base-1024",
+      "fixture": "a-id-hematologi",
+      "run": 2,
+      "at": "2026-11-10T00:34:24.588Z",
+      "ok": true,
+      "text": "{\"results\":[\n  {\"testName\": \"Hemoglobin\", \"value\": \"10.2\", \"unit\": \"g/dL\", \"referenceRange\": \"12.0 - 16.0\", \"flag\": \"normal\"},\n  {\"testName\": \"Leukosit\", \"value\": \"13.800\", \"unit\": \"/µL\", \"referenceRange\": \"4.000 - 10.000\", \"flag\": \"high\"},\n  {\"testName\": \"Eritrosit\", \"value\": \"3.9\", \"unit\": \"juta/µL\", \"referenceRange\": \"4.0 - 5.2\", \"flag\": \"low\"},\n  {\"testName\": \"Hematokrit\", \"value\": \"31.5\", \"unit\": \"%\", \"referenceRange\": \"36 - 46\", \"flag\": \"normal\"},\n  {\"testName\": \"Trombosit\", \"value\": \"452.000\", \"unit\": \"/µL\", \"referenceRange\": \"150.000 - 400.000\", \"flag\": \"high\"},\n  {\"testName\": \"MCV\", \"value\": \"80.8\", \"unit\": \"fl\", \"referenceRange\": \"80 - 100\", \"flag\": \"normal\"},\n  {\"testName\": \"MCH\", \"value\": \"26.2\", \"unit\": \"pg\", \"referenceRange\": \"27 - 34\", \"flag\": \"low\"},\n  {\"testName\": \"MCHC\", \"value\": \"32.4\", \"unit\": \"g/dL\", \"referenceRange\": \"32 - 36\", \"flag\": \"normal\"},\n  {\"testName\": \"LED\", \"value\": \"28\", \"unit\": \"mm/jam\", \"referenceRange\": \"0 - 20\", \"flag\": \"high\"},\n  {\"testName\": \"Eosinofil\", \"value\": \"2\", \"unit\": \"%\", \"referenceRange\": \"1 - 3\", \"flag\": \"normal\"},\n  {\"testName\": \"Basofil\", \"value\": \"0\", \"unit\": \"%\", \"referenceRange\": \"0 - 1\", \"flag\": \"normal\"},\n  {\"testName\": \"Neutrofil Segmen\", \"value\": \"78\", \"unit\": \"%\", \"referenceRange\": \"50 - 70\", \"flag\": \"normal\"},\n  {\"testName\": \"Limfosit\", \"value\": \"15\", \"unit\": \"%\", \"referenceRange\": \"20 - 40\", \"flag\": \"normal\"},\n  {\"testName\": \"Monosit\", \"value\": \"5\", \"unit\": \"%\", \"referenceRange\": \"2 - 8\", \"flag\": \"normal\"}\n], \"maskedPii\":[\n  {\"kind\": \"name\", \"placeholder\": \"[NAMA]\"},\n  {\"kind\": \"nik\", \"placeholder\": \"[NIK]\"},\n  {\"kind\": \"medical_record_number\", \"placeholder\": \"[NOMOR_REKAM_MEDIS]\"},\n  {\"kind\": \"date_of_birth\", \"placeholder\": \"[TANGGAL_LAHIR]\"},\n  {\"kind\": \"address\", \"placeholder\": \"[ALAMAT]\"},\n  {\"kind\": \"phone\", \"placeholder\": \"[TELEPON]\"}\n]}",
+      "image": "1338x990→1024x758",
+      "outChars": 1836,
+      "decodeMs": 217,
+      "createMs": 31,
+      "prefillMs": 2413,
+      "genMs": 42443,
+      "promptMs": 44856,
+      "totalMs": 45103,
+      "score": {
+        "summary": {
+          "jsonValid": true,
+          "rowsOut": 14,
+          "rowsTruth": 14,
+          "rowsMatched": 14,
+          "extraRows": 0,
+          "fieldAcc": 0.943,
+          "perField": {
+            "testName": 1,
+            "value": 1,
+            "unit": 1,
+            "referenceRange": 1,
+            "flag": 0.714
+          },
+          "piiKindRecall": 1,
+          "piiKindsMissing": [],
+          "piiLeaks": []
+        },
+        "errors": [
+          {
+            "test": "Hemoglobin",
+            "bad": {
+              "flag": {
+                "got": "normal",
+                "want": "low"
+              }
+            }
+          },
+          {
+            "test": "Hematokrit",
+            "bad": {
+              "flag": {
+                "got": "normal",
+                "want": "low"
+              }
+            }
+          },
+          {
+            "test": "Neutrofil Segmen",
+            "bad": {
+              "flag": {
+                "got": "normal",
+                "want": "high"
+              }
+            }
+          },
+          {
+            "test": "Limfosit",
+            "bad": {
+              "flag": {
+                "got": "normal",
+                "want": "low"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "variant": "base-1024",
+      "fixture": "a-id-hematologi",
+      "run": 3,
+      "at": "2026-11-10T00:35:09.349Z",
+      "ok": true,
+      "text": "{\"results\": [{\"testName\": \"Hemoglobin\", \"value\": \"10.2\", \"unit\": \"g/dL\", \"referenceRange\": \"12.0 - 16.0\", \"flag\": \"high\"}, {\"testName\": \"Leukosit\", \"value\": \"13.800\", \"unit\": \"/µL\", \"referenceRange\": \"4.000 - 10.000\", \"flag\": \"high\"}, {\"testName\": \"Eritrosit\", \"value\": \"3.9\", \"unit\": \"juta/µL\", \"referenceRange\": \"4.0 - 5.2\", \"flag\": \"low\"}, {\"testName\": \"Hematokrit\", \"value\": \"31.5\", \"unit\": \"%\", \"referenceRange\": \"36 - 46\", \"flag\": \"high\"}, {\"testName\": \"Trombosit\", \"value\": \"452.000\", \"unit\": \"/µL\", \"referenceRange\": \"150.000 - 400.000\", \"flag\": \"high\"}, {\"testName\": \"MCV\", \"value\": \"80.8\", \"unit\": \"fl\", \"referenceRange\": \"80 - 100\", \"flag\": \"normal\"}, {\"testName\": \"MCH\", \"value\": \"26.2\", \"unit\": \"pg\", \"referenceRange\": \"27 - 34\", \"flag\": \"low\"}, {\"testName\": \"MCHC\", \"value\": \"32.4\", \"unit\": \"g/dL\", \"referenceRange\": \"32 - 36\", \"flag\": \"normal\"}, {\"testName\": \"LED\", \"value\": \"28\", \"unit\": \"mm/jam\", \"referenceRange\": \"0 - 20\", \"flag\": \"high\"}, {\"testName\": \"Eosinofil\", \"value\": \"2\", \"unit\": \"%\", \"referenceRange\": \"1 - 3\", \"flag\": \"normal\"}, {\"testName\": \"Basofil\", \"value\": \"0\", \"unit\": \"%\", \"referenceRange\": \"0 - 1\", \"flag\": \"normal\"}, {\"testName\": \"Neutrofil Segmen\", \"value\": \"78\", \"unit\": \"%\", \"referenceRange\": \"50 - 70\", \"flag\": \"high\"}, {\"testName\": \"Limfosit\", \"value\": \"15\", \"unit\": \"%\", \"referenceRange\": \"20 - 40\", \"flag\": \"low\"}, {\"testName\": \"Monosit\", \"value\": \"5\", \"unit\": \"%\", \"referenceRange\": \"2 - 8\", \"flag\": \"normal\"}] , \"maskedPii\": [{\"kind\": \"name\", \"placeholder\": \"[NAMA]\"}]}",
+      "image": "1338x990→1024x758",
+      "outChars": 1516,
+      "decodeMs": 1422,
+      "createMs": 210,
+      "prefillMs": 10352,
+      "genMs": 32375,
+      "promptMs": 42727,
+      "totalMs": 44359,
+      "score": {
+        "summary": {
+          "jsonValid": true,
+          "rowsOut": 14,
+          "rowsTruth": 14,
+          "rowsMatched": 14,
+          "extraRows": 0,
+          "fieldAcc": 0.971,
+          "perField": {
+            "testName": 1,
+            "value": 1,
+            "unit": 1,
+            "referenceRange": 1,
+            "flag": 0.857
+          },
+          "piiKindRecall": 0.167,
+          "piiKindsMissing": [
+            "nik",
+            "medical_record_number",
+            "date_of_birth",
+            "address",
+            "phone"
+          ],
+          "piiLeaks": []
+        },
+        "errors": [
+          {
+            "test": "Hemoglobin",
+            "bad": {
+              "flag": {
+                "got": "high",
+                "want": "low"
+              }
+            }
+          },
+          {
+            "test": "Hematokrit",
+            "bad": {
+              "flag": {
+                "got": "high",
+                "want": "low"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "variant": "base-1024",
+      "fixture": "c-id-hematologi-foto",
+      "run": 1,
+      "at": "2026-11-10T00:35:48.046Z",
+      "ok": true,
+      "text": "{\"results\": [{\"testName\": \"Hemoglobin\", \"value\": \"10.2\", \"unit\": \"g/dL\", \"referenceRange\": \"12.0 - 16.0\", \"flag\": \"normal\"}, {\"testName\": \"Leukosit\", \"value\": \"13.800\", \"unit\": \"L\", \"referenceRange\": \"12.0 - 16.0\", \"flag\": \"high\"}, {\"testName\": \"Eritrosit\", \"value\": \"3.9\", \"unit\": \"/\", \"referenceRange\": \"4.000 - 10.000\", \"flag\": \"normal\"}, {\"testName\": \"Hematocrit\", \"value\": \"31.5\", \"unit\": \"L\", \"referenceRange\": \"4.0 - 5.2\", \"flag\": \"high\"}, {\"testName\": \"Trombosit\", \"value\": \"452.000\", \"unit\": \"%\", \"referenceRange\": \"36 - 46\", \"flag\": \"high\"}, {\"testName\": \"MCV\", \"value\": \"80.8\", \"unit\": \"uL\", \"referenceRange\": \"150.000 - 400.000\", \"flag\": \"normal\"}, {\"testName\": \"MCH\", \"value\": \"26.2\", \"unit\": \"ft\", \"referenceRange\": \"80 - 100\", \"flag\": \"low\"}, {\"testName\": \"MCHC\", \"value\": \"32.4\", \"unit\": \"\", \"referenceRange\": \"27 - 34\", \"flag\": \"high\"}, {\"testName\": \"LED\", \"value\": \"28\", \"unit\": \"g/dL\", \"referenceRange\": \"32 - 36\", \"flag\": \"normal\"}, {\"testName\": \"Eosinofil\", \"value\": \"2\", \"unit\": \"mm/jam\", \"referenceRange\": \"0 - 20\", \"flag\": \"normal\"}, {\"testName\": \"Basofil\", \"value\": \"0\", \"unit\": \"%\", \"referenceRange\": \"1 - 3\", \"flag\": \"normal\"}, {\"testName\": \"Neutrofil Segmen\", \"value\": \"78\", \"unit\": \"%\", \"referenceRange\": \"0 - 1\", \"flag\": \"normal\"}, {\"testName\": \"Limfosit\", \"value\": \"15\", \"unit\": \"%\", \"referenceRange\": \"50 - 70\", \"flag\": \"normal\"}, {\"testName\": \"Monosit\", \"value\": \"-, \", \"unit\": \"%\", \"referenceRange\": \"20-40\", \"flag\": \"normal\"}]\n\n\n\n  , \"maskedPii\": [{\"kind\": \"name\", \"placeholder\": \"[NAMA]\" }, {\"kind\": \"nik\", \"placeholder\": \"[NIK]\" }, {\"kind\": \"medical_record_number\", \"placeholder\": \"[NOMOR_REKAM_MEDIS]\" }, {\"kind\": \"date_of_birth\", \"placeholder\": \"[TANGGAL_LAHIR]\" }, {\"kind\": \"address\", \"placeholder\": \"[ALAMAT]\" }, {\"kind\": \"phone\", \"placeholder\": \"[TELEPON]\" }]\n\n\n\n}",
+      "image": "1920x990→1024x528",
+      "outChars": 1806,
+      "decodeMs": 410,
+      "createMs": 34,
+      "prefillMs": 3260,
+      "genMs": 34873,
+      "promptMs": 38133,
+      "totalMs": 38577,
+      "score": {
+        "summary": {
+          "jsonValid": true,
+          "rowsOut": 14,
+          "rowsTruth": 14,
+          "rowsMatched": 13,
+          "extraRows": 1,
+          "fieldAcc": 0.543,
+          "perField": {
+            "testName": 0.929,
+            "value": 0.857,
+            "unit": 0.357,
+            "referenceRange": 0.071,
+            "flag": 0.5
+          },
+          "piiKindRecall": 1,
+          "piiKindsMissing": [],
+          "piiLeaks": []
+        },
+        "errors": [
+          {
+            "test": "Hemoglobin",
+            "bad": {
+              "flag": {
+                "got": "normal",
+                "want": "low"
+              }
+            }
+          },
+          {
+            "test": "Leukosit",
+            "bad": {
+              "unit": {
+                "got": "L",
+                "want": "/µL"
+              },
+              "referenceRange": {
+                "got": "12.0 - 16.0",
+                "want": "4.000 - 10.000"
+              }
+            }
+          },
+          {
+            "test": "Eritrosit",
+            "bad": {
+              "unit": {
+                "got": "/",
+                "want": "juta/µL"
+              },
+              "referenceRange": {
+                "got": "4.000 - 10.000",
+                "want": "4.0 - 5.2"
+              },
+              "flag": {
+                "got": "normal",
+                "want": "low"
+              }
+            }
+          },
+          {
+            "test": "Hematokrit",
+            "missing": true
+          },
+          {
+            "test": "Trombosit",
+            "bad": {
+              "unit": {
+                "got": "%",
+                "want": "/µL"
+              },
+              "referenceRange": {
+                "got": "36 - 46",
+                "want": "150.000 - 400.000"
+              }
+            }
+          },
+          {
+            "test": "MCV",
+            "bad": {
+              "unit": {
+                "got": "uL",
+                "want": "fL"
+              },
+              "referenceRange": {
+                "got": "150.000 - 400.000",
+                "want": "80 - 100"
+              }
+            }
+          },
+          {
+            "test": "MCH",
+            "bad": {
+              "unit": {
+                "got": "ft",
+                "want": "pg"
+              },
+              "referenceRange": {
+                "got": "80 - 100",
+                "want": "27 - 34"
+              }
+            }
+          },
+          {
+            "test": "MCHC",
+            "bad": {
+              "unit": {
+                "got": "",
+                "want": "g/dL"
+              },
+              "referenceRange": {
+                "got": "27 - 34",
+                "want": "32 - 36"
+              },
+              "flag": {
+                "got": "high",
+                "want": "normal"
+              }
+            }
+          },
+          {
+            "test": "LED",
+            "bad": {
+              "unit": {
+                "got": "g/dL",
+                "want": "mm/jam"
+              },
+              "referenceRange": {
+                "got": "32 - 36",
+                "want": "0 - 20"
+              },
+              "flag": {
+                "got": "normal",
+                "want": "high"
+              }
+            }
+          },
+          {
+            "test": "Eosinofil",
+            "bad": {
+              "unit": {
+                "got": "mm/jam",
+                "want": "%"
+              },
+              "referenceRange": {
+                "got": "0 - 20",
+                "want": "1 - 3"
+              }
+            }
+          },
+          {
+            "test": "Basofil",
+            "bad": {
+              "referenceRange": {
+                "got": "1 - 3",
+                "want": "0 - 1"
+              }
+            }
+          },
+          {
+            "test": "Neutrofil Segmen",
+            "bad": {
+              "referenceRange": {
+                "got": "0 - 1",
+                "want": "50 - 70"
+              },
+              "flag": {
+                "got": "normal",
+                "want": "high"
+              }
+            }
+          },
+          {
+            "test": "Limfosit",
+            "bad": {
+              "referenceRange": {
+                "got": "50 - 70",
+                "want": "20 - 40"
+              },
+              "flag": {
+                "got": "normal",
+                "want": "low"
+              }
+            }
+          },
+          {
+            "test": "Monosit",
+            "bad": {
+              "value": {
+                "got": "-, ",
+                "want": "5"
+              },
+              "referenceRange": {
+                "got": "20-40",
+                "want": "2 - 8"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "variant": "base-1024",
+      "fixture": "c-id-hematologi-foto",
+      "run": 2,
+      "at": "2026-11-10T00:37:48.170Z",
+      "ok": false,
+      "error": "TimeoutError: timeout",
+      "outChars": 8816,
+      "totalMs": 120055,
+      "score": {
+        "summary": {
+          "jsonValid": false,
+          "error": "TimeoutError: timeout"
+        }
+      }
+    },
+    {
+      "variant": "base-1024",
+      "fixture": "c-id-hematologi-foto",
+      "run": 3,
+      "at": "2026-11-10T00:38:27.672Z",
+      "ok": true,
+      "text": "{\"results\":[{\"testName\":\"Hemoglobin\",\"value\":\"10.2\",\"unit\":\"g/dL\",\"referenceRange\":\"12.0 - 16.0\",\"flag\":\"high\"},{\"testName\":\"Leukosit\",\"value\":\"13.800\",\"unit\":\"/µL\",\"referenceRange\":\"4.000 - 10.000\",\"flag\":\"high\"},{\"testName\":\"Eritrosit\",\"value\":\"3.9\",\"unit\":\"/µL\",\"referenceRange\":\"4.000 - 10.000\",\"flag\":\"low\"},{\"testName\":\"Hematokrit\",\"value\":\"31.5\",\"unit\":\"/µL\",\"referenceRange\":\"4.0 - 5.2\",\"flag\":\"low\"},{\"testName\":\"Trombosit\",\"value\":\"452.000\",\"unit\":\"%\",\"referenceRange\":\"36 - 46\",\"flag\":\"high\"},{\"testName\":\"MCV\",\"value\":\"80.8\",\"unit\":\"µL\",\"referenceRange\":\"150.000 - 400.000\",\"flag\":\"high\"},{\"testName\":\"MCH\",\"value\":\"26.2\",\"unit\":\"ftl\",\"referenceRange\":\"80 - 100\",\"flag\":\"low\"},{\"testName\":\"MCHC\",\"value\":\"32.4\",\"unit\":\"g/dL\",\"referenceRange\":\"27 - 34\",\"flag\":\"low\"},{\"testName\":\"LED\",\"value\":\"28\",\"unit\":\"g/dL\",\"referenceRange\":\"0 - 20\",\"flag\":\"high\"},{\"testName\":\"Eosinofil\",\"value\":\"2\",\"unit\":\"mm/jam\",\"referenceRange\":\"0 - 20\",\"flag\":\"high\"},{\"testName\":\"Basofil\",\"value\":\"0\",\"unit\":\"%\",\"referenceRange\":\"1 - 3\",\"flag\":\"normal\"},{\"testName\":\"Neutrofil Segmen\",\"value\":\"78\",\"unit\":\"%\",\"referenceRange\":\"0 - 1\",\"flag\":\"high\"},{\"testName\":\"Limfosit\",\"value\":\"15\",\"unit\":\"%\",\"referenceRange\":\"50 - 70\",\"flag\":\"normal\"},{\"testName\":\"Monosit\",\"value\":\"5\",\"unit\":\"%\",\"referenceRange\":\"20 - 40\",\"flag\":\"normal\"}],\"maskedPii\":[{\"kind\":\"name\",\"placeholder\":\" [NAMA]\"},{\"kind\":\"nik\",\"placeholder\":\"Tidak ada\"},{\"kind\":\"medical_record_number\",\"placeholder\":\"LB26110030042\"},{\"kind\":\"date_of_birth\",\"placeholder\":\"14-08-1991 (33 th) / P\"},{\"kind\":\"address\",\"placeholder\":\"J. Kemal Pahami No. 6, Kel. Sukamaju, Bandung\"},{\"kind\":\"phone\",\"placeholder\":\"0812-3456-7980\"}]}",
+      "image": "1920x990→1024x528",
+      "outChars": 1671,
+      "decodeMs": 271,
+      "createMs": 28,
+      "prefillMs": 6052,
+      "genMs": 32709,
+      "promptMs": 38762,
+      "totalMs": 39061,
+      "score": {
+        "summary": {
+          "jsonValid": true,
+          "rowsOut": 14,
+          "rowsTruth": 14,
+          "rowsMatched": 14,
+          "extraRows": 0,
+          "fieldAcc": 0.671,
+          "perField": {
+            "testName": 1,
+            "value": 1,
+            "unit": 0.5,
+            "referenceRange": 0.214,
+            "flag": 0.643
+          },
+          "piiKindRecall": 1,
+          "piiKindsMissing": [],
+          "piiLeaks": [
+            "date_of_birth",
+            "address"
+          ]
+        },
+        "errors": [
+          {
+            "test": "Hemoglobin",
+            "bad": {
+              "flag": {
+                "got": "high",
+                "want": "low"
+              }
+            }
+          },
+          {
+            "test": "Eritrosit",
+            "bad": {
+              "unit": {
+                "got": "/µL",
+                "want": "juta/µL"
+              },
+              "referenceRange": {
+                "got": "4.000 - 10.000",
+                "want": "4.0 - 5.2"
+              }
+            }
+          },
+          {
+            "test": "Hematokrit",
+            "bad": {
+              "unit": {
+                "got": "/µL",
+                "want": "%"
+              },
+              "referenceRange": {
+                "got": "4.0 - 5.2",
+                "want": "36 - 46"
+              }
+            }
+          },
+          {
+            "test": "Trombosit",
+            "bad": {
+              "unit": {
+                "got": "%",
+                "want": "/µL"
+              },
+              "referenceRange": {
+                "got": "36 - 46",
+                "want": "150.000 - 400.000"
+              }
+            }
+          },
+          {
+            "test": "MCV",
+            "bad": {
+              "unit": {
+                "got": "µL",
+                "want": "fL"
+              },
+              "referenceRange": {
+                "got": "150.000 - 400.000",
+                "want": "80 - 100"
+              },
+              "flag": {
+                "got": "high",
+                "want": "normal"
+              }
+            }
+          },
+          {
+            "test": "MCH",
+            "bad": {
+              "unit": {
+                "got": "ftl",
+                "want": "pg"
+              },
+              "referenceRange": {
+                "got": "80 - 100",
+                "want": "27 - 34"
+              }
+            }
+          },
+          {
+            "test": "MCHC",
+            "bad": {
+              "referenceRange": {
+                "got": "27 - 34",
+                "want": "32 - 36"
+              },
+              "flag": {
+                "got": "low",
+                "want": "normal"
+              }
+            }
+          },
+          {
+            "test": "LED",
+            "bad": {
+              "unit": {
+                "got": "g/dL",
+                "want": "mm/jam"
+              }
+            }
+          },
+          {
+            "test": "Eosinofil",
+            "bad": {
+              "unit": {
+                "got": "mm/jam",
+                "want": "%"
+              },
+              "referenceRange": {
+                "got": "0 - 20",
+                "want": "1 - 3"
+              },
+              "flag": {
+                "got": "high",
+                "want": "normal"
+              }
+            }
+          },
+          {
+            "test": "Basofil",
+            "bad": {
+              "referenceRange": {
+                "got": "1 - 3",
+                "want": "0 - 1"
+              }
+            }
+          },
+          {
+            "test": "Neutrofil Segmen",
+            "bad": {
+              "referenceRange": {
+                "got": "0 - 1",
+                "want": "50 - 70"
+              }
+            }
+          },
+          {
+            "test": "Limfosit",
+            "bad": {
+              "referenceRange": {
+                "got": "50 - 70",
+                "want": "20 - 40"
+              },
+              "flag": {
+                "got": "normal",
+                "want": "low"
+              }
+            }
+          },
+          {
+            "test": "Monosit",
+            "bad": {
+              "referenceRange": {
+                "got": "20 - 40",
+                "want": "2 - 8"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "variant": "app",
+      "fixture": "a-id-hematologi",
+      "run": 1,
+      "at": "2026-11-10T00:39:19.791Z",
+      "ok": true,
+      "text": "{\"results\":[{\"testName\":\"Hemoglobin\",\"value\":\"10.2\",\"unit\":\"g/dL\",\"referenceRange\":\"12.0 - 16.0\",\"flag\":\"low\"},{\"testName\":\"Leukosit\",\"value\":\"13.800\",\"unit\":\"/uL\",\"referenceRange\":\"4.000 - 10.000\",\"flag\":\"high\"},{\"testName\":\"Eritrosit\",\"value\":\"3.9\",\"unit\":\"juta/uL\",\"referenceRange\":\"4.0 - 5.2\",\"flag\":\"low\"},{\"testName\":\"Hematkrit\",\"value\":\"31.5\",\"unit\":\"%\",\"referenceRange\":\"36 - 46\",\"flag\":\"low\"},{\"testName\":\"Trombosit\",\"value\":\"452.000\",\"unit\":\"/uL\",\"referenceRange\":\"150.000 - 400.000\",\"flag\":\"high\"},{\"testName\":\"MCV\",\"value\":\"80.8\",\"unit\":\"fl\",\"referenceRange\":\"80 - 100\",\"flag\":\"normal\"},{\"testName\":\"MCH\",\"value\":\"26.2\",\"unit\":\"pg\",\"referenceRange\":\"27 - 34\",\"flag\":\"low\"},{\"testName\":\"MCHC\",\"value\":\"32.4\",\"unit\":\"g/dL\",\"referenceRange\":\"32 - 36\",\"flag\":\"normal\"},{\"testName\":\"LED\",\"value\":\"28\",\"unit\":\"mm/jam\",\"referenceRange\":\"0 - 20\",\"flag\":\"high\"},{\"testName\":\"Eosinofil\",\"value\":\"2\",\"unit\":\"%\",\"referenceRange\":\"1 - 3\",\"flag\":\"normal\"},{\"testName\":\"Basofil\",\"value\":\"0\",\"unit\":\"%\",\"referenceRange\":\"0 - 1\",\"flag\":\"normal\"},{\"testName\":\"Neutrofil Segmen\",\"value\":\"78\",\"unit\":\"%\",\"referenceRange\":\"50 - 70\",\"flag\":\"high\"},{\"testName\":\"Limfosit\",\"value\":\"15\",\"unit\":\"%\",\"referenceRange\":\"20 - 40\",\"flag\":\"low\"},{\"testName\":\"Monosit\",\"value\":\"5\",\"unit\":\"%\",\"referenceRange\":\"2 - 8\",\"flag\":\"normal\"}],\"maskedPii\":[{\"kind\":\"name\",\"placeholder\":\"[name]\"},{\"kind\":\"nik\",\"placeholder\":\"[nik]\"}]}",
+      "image": "1338x990→1024x758",
+      "outChars": 1255,
+      "decodeMs": 151,
+      "createMs": 4,
+      "prefillMs": 2859,
+      "genMs": 25586,
+      "promptMs": 28446,
+      "totalMs": 28601,
+      "score": {
+        "summary": {
+          "jsonValid": true,
+          "rowsOut": 14,
+          "rowsTruth": 14,
+          "rowsMatched": 13,
+          "extraRows": 1,
+          "fieldAcc": 0.929,
+          "perField": {
+            "testName": 0.929,
+            "value": 0.929,
+            "unit": 0.929,
+            "referenceRange": 0.929,
+            "flag": 0.929
+          },
+          "piiKindRecall": 0.333,
+          "piiKindsMissing": [
+            "medical_record_number",
+            "date_of_birth",
+            "address",
+            "phone"
+          ],
+          "piiLeaks": []
+        },
+        "errors": [
+          {
+            "test": "Hematokrit",
+            "missing": true
+          }
+        ]
+      }
+    },
+    {
+      "variant": "app",
+      "fixture": "a-id-hematologi",
+      "run": 2,
+      "at": "2026-11-10T00:39:49.901Z",
+      "ok": true,
+      "text": "{\"results\":[{\"testName\":\"Hemoglobin\",\"value\":\"10.2\",\"unit\":\"g/dL\",\"referenceRange\":\"12.0 - 16.0\",\"flag\":\"low\"},{\"testName\":\"Leukosit\",\"value\":\"13.800\",\"unit\":\"/µL\",\"referenceRange\":\"4.000 - 10.000\",\"flag\":\"high\"},{\"testName\":\"Eritrosit\",\"value\":\"3.9\",\"unit\":\"juta/µL\",\"referenceRange\":\"4.0 - 5.2\",\"flag\":\"low\"},{\"testName\":\"Hematokrit\",\"value\":\"31.5\",\"unit\":\"%\",\"referenceRange\":\"36 - 46\",\"flag\":\"low\"},{\"testName\":\"Trombosit\",\"value\":\"452.000\",\"unit\":\"/µL\",\"referenceRange\":\"150.000 - 400.000\",\"flag\":\"high\"},{\"testName\":\"MCV\",\"value\":\"80.8\",\"unit\":\"fl\",\"referenceRange\":\"80 - 100\",\"flag\":\"normal\"},{\"testName\":\"MCH\",\"value\":\"26.2\",\"unit\":\"pg\",\"referenceRange\":\"27 - 34\",\"flag\":\"low\"},{\"testName\":\"MCHC\",\"value\":\"32.4\",\"unit\":\"g/dL\",\"referenceRange\":\"32 - 36\",\"flag\":\"normal\"},{\"testName\":\"LED\",\"value\":\"28\",\"unit\":\"mm/jam\",\"referenceRange\":\"0 - 20\",\"flag\":\"high\"},{\"testName\":\"Eosinofil\",\"value\":\"2\",\"unit\":\"%\",\"referenceRange\":\"1 - 3\",\"flag\":\"normal\"},{\"testName\":\"Basofil\",\"value\":\"0\",\"unit\":\"%\",\"referenceRange\":\"0 - 1\",\"flag\":\"normal\"},{\"testName\":\"Neutrofil Segmen\",\"value\":\"78\",\"unit\":\"%\",\"referenceRange\":\"50 - 70\",\"flag\":\"high\"},{\"testName\":\"Limfosit\",\"value\":\"15\",\"unit\":\"%\",\"referenceRange\":\"20 - 40\",\"flag\":\"low\"},{\"testName\":\"Monosit\",\"value\":\"5\",\"unit\":\"%\",\"referenceRange\":\"2 - 8\",\"flag\":\"normal\"}],\"maskedPii\":[{\"kind\":\"name\",\"placeholder\":\"[name]\"},{\"kind\":\"nik\",\"placeholder\":\"[nik]\"},{\"kind\":\"medical_record_number\",\"placeholder\":\"[medical_record_number]\"}]}",
+      "image": "1338x990→1024x758",
+      "outChars": 1285,
+      "decodeMs": 258,
+      "createMs": 6,
+      "prefillMs": 2551,
+      "genMs": 27077,
+      "promptMs": 29628,
+      "totalMs": 29892,
+      "score": {
+        "summary": {
+          "jsonValid": true,
+          "rowsOut": 14,
+          "rowsTruth": 14,
+          "rowsMatched": 14,
+          "extraRows": 0,
+          "fieldAcc": 1,
+          "perField": {
+            "testName": 1,
+            "value": 1,
+            "unit": 1,
+            "referenceRange": 1,
+            "flag": 1
+          },
+          "piiKindRecall": 0.5,
+          "piiKindsMissing": [
+            "date_of_birth",
+            "address",
+            "phone"
+          ],
+          "piiLeaks": []
+        },
+        "errors": []
+      }
+    },
+    {
+      "variant": "app",
+      "fixture": "a-id-hematologi",
+      "run": 3,
+      "at": "2026-11-10T00:40:19.088Z",
+      "ok": true,
+      "text": "{\"results\":[{\"testName\":\"Hemoglobin\",\"value\":\"10.2\",\"unit\":\"g/dL\",\"referenceRange\":\"12.0 - 16.0\",\"flag\":\"low\"},{\"testName\":\"Leukosit\",\"value\":\"13.800\",\"unit\":\"µL\",\"referenceRange\":\"4.000 - 10.000\",\"flag\":\"high\"},{\"testName\":\"Eritrosit\",\"value\":\"3.9\",\"unit\":\"juta/µL\",\"referenceRange\":\"4.0 - 5.2\",\"flag\":\"low\"},{\"testName\":\"Hematkrit\",\"value\":\"31.5\",\"unit\":\"%\",\"referenceRange\":\"36 - 46\",\"flag\":\"low\"},{\"testName\":\"Trombosit\",\"value\":\"452.000\",\"unit\":\"µL\",\"referenceRange\":\"150.000 - 400.000\",\"flag\":\"high\"},{\"testName\":\"MCV\",\"value\":\"80.8\",\"unit\":\"fl\",\"referenceRange\":\"80 - 100\",\"flag\":\"normal\"},{\"testName\":\"MCH\",\"value\":\"26.2\",\"unit\":\"pg\",\"referenceRange\":\"27 - 34\",\"flag\":\"low\"},{\"testName\":\"MCHC\",\"value\":\"32.4\",\"unit\":\"g/dL\",\"referenceRange\":\"32 - 36\",\"flag\":\"normal\"},{\"testName\":\"LED\",\"value\":\"28\",\"unit\":\"mm/jam\",\"referenceRange\":\"0 - 20\",\"flag\":\"high\"},{\"testName\":\"Eosinofil\",\"value\":\"2\",\"unit\":\"%\",\"referenceRange\":\"1 - 3\",\"flag\":\"normal\"},{\"testName\":\"Basofil\",\"value\":\"0\",\"unit\":\"%\",\"referenceRange\":\"0 - 1\",\"flag\":\"normal\"},{\"testName\":\"Neutrofil Segmen\",\"value\":\"78\",\"unit\":\"%\",\"referenceRange\":\"50 - 70\",\"flag\":\"high\"},{\"testName\":\"Limfosit\",\"value\":\"15\",\"unit\":\"%\",\"referenceRange\":\"20 - 40\",\"flag\":\"low\"},{\"testName\":\"Monosit\",\"value\":\"5\",\"unit\":\"%\",\"referenceRange\":\"2 - 8\",\"flag\":\"normal\"}],\"maskedPii\":[{\"kind\":\"name\",\"placeholder\":\"[name]\"},{\"kind\":\"nik\",\"placeholder\":\"[nik]\"},{\"kind\":\"medical_record_number\",\"placeholder\":\"[medical_record_number]\"}]}",
+      "image": "1338x990→1024x758",
+      "outChars": 1284,
+      "decodeMs": 545,
+      "createMs": 13,
+      "prefillMs": 3025,
+      "genMs": 25444,
+      "promptMs": 28469,
+      "totalMs": 29027,
+      "score": {
+        "summary": {
+          "jsonValid": true,
+          "rowsOut": 14,
+          "rowsTruth": 14,
+          "rowsMatched": 13,
+          "extraRows": 1,
+          "fieldAcc": 0.929,
+          "perField": {
+            "testName": 0.929,
+            "value": 0.929,
+            "unit": 0.929,
+            "referenceRange": 0.929,
+            "flag": 0.929
+          },
+          "piiKindRecall": 0.5,
+          "piiKindsMissing": [
+            "date_of_birth",
+            "address",
+            "phone"
+          ],
+          "piiLeaks": []
+        },
+        "errors": [
+          {
+            "test": "Hematokrit",
+            "missing": true
+          }
+        ]
+      }
+    },
+    {
+      "variant": "app",
+      "fixture": "c-id-hematologi-foto",
+      "run": 1,
+      "at": "2026-11-10T00:40:52.927Z",
+      "ok": true,
+      "text": "{\"results\":[{\"testName\":\"Hemoglobin\",\"value\":\"10.2\",\"unit\":\"g/dL\",\"referenceRange\":\"12.0 - 16.0\",\"flag\":\"low\"},{\"testName\":\"Leukosit\",\"value\":\"13.800\",\"unit\":\"µL\",\"referenceRange\":\"4.000 - 10.000\",\"flag\":\"high\"},{\"testName\":\"Eritrosit\",\"value\":\"3.9\",\"unit\":\"µL\",\"referenceRange\":\"4.0 - 5.2\",\"flag\":\"low\"},{\"testName\":\"Hematokrit\",\"value\":\"31.5\",\"unit\":\"µL/µL\",\"referenceRange\":\"150.000 - 400.000\",\"flag\":\"low\"},{\"testName\":\"Trombosit\",\"value\":\"452.000\",\"unit\":\"%\",\"referenceRange\":\"36 - 46\",\"flag\":\"high\"},{\"testName\":\"MCV\",\"value\":\"80.8\",\"unit\":\"µL\",\"referenceRange\":\"80 - 100\",\"flag\":\"normal\"},{\"testName\":\"MCH\",\"value\":\"26.2\",\"unit\":\"ft\",\"referenceRange\":\"27 - 34\",\"flag\":\"low\"},{\"testName\":\"MCHC\",\"value\":\"32.4\",\"unit\":\"g/dL\",\"referenceRange\":\"0 - 20\",\"flag\":\"high\"},{\"testName\":\"LED\",\"value\":\"28\",\"unit\":\"g/dL\",\"referenceRange\":\"1 - 3\",\"flag\":\"high\"},{\"testName\":\"Eosinofil\",\"value\":\"2\",\"unit\":\"mm/am\",\"referenceRange\":\"0 - 20\",\"flag\":\"normal\"},{\"testName\":\"Basofil\",\"value\":\"0\",\"unit\":\"%\",\"referenceRange\":\"1 - 3\",\"flag\":\"low\"},{\"testName\":\"Neutrofil Segmen\",\"value\":\"78\",\"unit\":\"%\",\"referenceRange\":\"0 - 1\",\"flag\":\"high\"},{\"testName\":\"Limfosit\",\"value\":\"15\",\"unit\":\"%\",\"referenceRange\":\"50 - 70\",\"flag\":\"low\"},{\"testName\":\"Monosit\",\"value\":\"2\",\"unit\":\"%\",\"referenceRange\":\"20 - 40\",\"flag\":\"low\"}],\"maskedPii\":[{\"kind\":\"name\",\"placeholder\":\"[name]\"},{\"kind\":\"nik\",\"placeholder\":\"[nik]\"},{\"kind\":\"medical_record_number\",\"placeholder\":\"[medical_record_number]\"},{\"kind\":\"date_of_birth\",\"placeholder\":\"[date_of_birth]\"},{\"kind\":\"address\",\"placeholder\":\"[address]\"},{\"kind\":\"phone\",\"placeholder\":\"[phone]\"},{\"kind\":\"other\",\"placeholder\":\"[other]\"}]}",
+      "image": "1920x990→1024x528",
+      "outChars": 1841,
+      "decodeMs": 231,
+      "createMs": 10,
+      "prefillMs": 2616,
+      "genMs": 30885,
+      "promptMs": 33501,
+      "totalMs": 33742,
+      "score": {
+        "summary": {
+          "jsonValid": true,
+          "rowsOut": 14,
+          "rowsTruth": 14,
+          "rowsMatched": 14,
+          "extraRows": 0,
+          "fieldAcc": 0.714,
+          "perField": {
+            "testName": 1,
+            "value": 0.929,
+            "unit": 0.5,
+            "referenceRange": 0.357,
+            "flag": 0.786
+          },
+          "piiKindRecall": 1,
+          "piiKindsMissing": [],
+          "piiLeaks": []
+        },
+        "errors": [
+          {
+            "test": "Eritrosit",
+            "bad": {
+              "unit": {
+                "got": "µL",
+                "want": "juta/µL"
+              }
+            }
+          },
+          {
+            "test": "Hematokrit",
+            "bad": {
+              "unit": {
+                "got": "µL/µL",
+                "want": "%"
+              },
+              "referenceRange": {
+                "got": "150.000 - 400.000",
+                "want": "36 - 46"
+              }
+            }
+          },
+          {
+            "test": "Trombosit",
+            "bad": {
+              "unit": {
+                "got": "%",
+                "want": "/µL"
+              },
+              "referenceRange": {
+                "got": "36 - 46",
+                "want": "150.000 - 400.000"
+              }
+            }
+          },
+          {
+            "test": "MCV",
+            "bad": {
+              "unit": {
+                "got": "µL",
+                "want": "fL"
+              }
+            }
+          },
+          {
+            "test": "MCH",
+            "bad": {
+              "unit": {
+                "got": "ft",
+                "want": "pg"
+              }
+            }
+          },
+          {
+            "test": "MCHC",
+            "bad": {
+              "referenceRange": {
+                "got": "0 - 20",
+                "want": "32 - 36"
+              },
+              "flag": {
+                "got": "high",
+                "want": "normal"
+              }
+            }
+          },
+          {
+            "test": "LED",
+            "bad": {
+              "unit": {
+                "got": "g/dL",
+                "want": "mm/jam"
+              },
+              "referenceRange": {
+                "got": "1 - 3",
+                "want": "0 - 20"
+              }
+            }
+          },
+          {
+            "test": "Eosinofil",
+            "bad": {
+              "unit": {
+                "got": "mm/am",
+                "want": "%"
+              },
+              "referenceRange": {
+                "got": "0 - 20",
+                "want": "1 - 3"
+              }
+            }
+          },
+          {
+            "test": "Basofil",
+            "bad": {
+              "referenceRange": {
+                "got": "1 - 3",
+                "want": "0 - 1"
+              },
+              "flag": {
+                "got": "low",
+                "want": "normal"
+              }
+            }
+          },
+          {
+            "test": "Neutrofil Segmen",
+            "bad": {
+              "referenceRange": {
+                "got": "0 - 1",
+                "want": "50 - 70"
+              }
+            }
+          },
+          {
+            "test": "Limfosit",
+            "bad": {
+              "referenceRange": {
+                "got": "50 - 70",
+                "want": "20 - 40"
+              }
+            }
+          },
+          {
+            "test": "Monosit",
+            "bad": {
+              "value": {
+                "got": "2",
+                "want": "5"
+              },
+              "referenceRange": {
+                "got": "20 - 40",
+                "want": "2 - 8"
+              },
+              "flag": {
+                "got": "low",
+                "want": "normal"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "variant": "app",
+      "fixture": "c-id-hematologi-foto",
+      "run": 2,
+      "at": "2026-11-10T00:41:15.841Z",
+      "ok": true,
+      "text": "{\"results\":[{\"testName\":\"Hemoglobin\",\"value\":\"10.2\",\"unit\":\"g/dL\",\"referenceRange\":\"12.0 - 16.0\",\"flag\":\"low\"},{\"testName\":\"Leukosit\",\"value\":\"13.800\",\"unit\":\"/uL\",\"referenceRange\":\"4.000 - 10.000\",\"flag\":\"high\"},{\"testName\":\"Eritrosit\",\"value\":\"3,9\",\"unit\":\"/uL\",\"referenceRange\":\"4.000 - 10.000\",\"flag\":\"low\"},{\"testName\":\"Hematokrit\",\"value\":\"31.5\",\"unit\":\"µ/L\",\"referenceRange\":\"4.0 - 5.2\",\"flag\":\"high\"},{\"testName\":\"Trombosit\",\"value\":\"452.000\",\"unit\":\"%\",\"referenceRange\":\"36 - 46\",\"flag\":\"high\"},{\"testName\":\"MCV\",\"value\":\"80.8\",\"unit\":\"/µL\",\"referenceRange\":\"150.000 - 400.000\",\"flag\":\"low\"},{\"testName\":\"MCH\",\"value\":\"26.2\",\"unit\":\"fl\",\"referenceRange\":\"80 - 100\",\"flag\":\"low\"},{\"testName\":\"MCHC\",\"value\":\"32.4\",\"unit\":\"g/dL\",\"referenceRange\":\"27 - 34\",\"flag\":\"normal\"},{\"testName\":\"LED\",\"value\":\"28\",\"unit\":\"g/dL\",\"referenceRange\":\"32 - 36\",\"flag\":\"low\"},{\"testName\":\"Eosinofil\",\"value\":\"2\",\"unit\":\"mm/jam\",\"referenceRange\":\"0 - 20\",\"flag\":\"normal\"},{\"testName\":\"Basofil\",\"value\":\"0\",\"unit\":\"%\",\"referenceRange\":\"1 - 3\",\"flag\":\"low\"},{\"testName\":\"Neutrofil Segmen\",\"value\":\"78\",\"unit\":\"%\",\"referenceRange\":\"0 - 1\",\"flag\":\"high\"},{\"testName\":\"Limfosit\",\"value\":\"15\",\"unit\":\"%\",\"referenceRange\":\"50 - 70\",\"flag\":\"low\"},{\"testName\":\"Monosit\",\"value\":\"0\",\"unit\":\"%\",\"referenceRange\":\"20 - 40\",\"flag\":\"low\"}],\"maskedPii\":[{\"kind\":\"name\",\"placeholder\":\"[name]\"},{\"kind\":\"nik\",\"placeholder\":\"[nik]\"},{\"kind\":\"medical_record_number\",\"placeholder\":\"[medical_record_number]\"}]}",
+      "image": "1920x990→1024x528",
+      "outChars": 1289,
+      "decodeMs": 207,
+      "createMs": 8,
+      "prefillMs": 1930,
+      "genMs": 20702,
+      "promptMs": 22632,
+      "totalMs": 22847,
+      "score": {
+        "summary": {
+          "jsonValid": true,
+          "rowsOut": 14,
+          "rowsTruth": 14,
+          "rowsMatched": 14,
+          "extraRows": 0,
+          "fieldAcc": 0.643,
+          "perField": {
+            "testName": 1,
+            "value": 0.929,
+            "unit": 0.5,
+            "referenceRange": 0.143,
+            "flag": 0.643
+          },
+          "piiKindRecall": 0.5,
+          "piiKindsMissing": [
+            "date_of_birth",
+            "address",
+            "phone"
+          ],
+          "piiLeaks": []
+        },
+        "errors": [
+          {
+            "test": "Eritrosit",
+            "bad": {
+              "unit": {
+                "got": "/uL",
+                "want": "juta/µL"
+              },
+              "referenceRange": {
+                "got": "4.000 - 10.000",
+                "want": "4.0 - 5.2"
+              }
+            }
+          },
+          {
+            "test": "Hematokrit",
+            "bad": {
+              "unit": {
+                "got": "µ/L",
+                "want": "%"
+              },
+              "referenceRange": {
+                "got": "4.0 - 5.2",
+                "want": "36 - 46"
+              },
+              "flag": {
+                "got": "high",
+                "want": "low"
+              }
+            }
+          },
+          {
+            "test": "Trombosit",
+            "bad": {
+              "unit": {
+                "got": "%",
+                "want": "/µL"
+              },
+              "referenceRange": {
+                "got": "36 - 46",
+                "want": "150.000 - 400.000"
+              }
+            }
+          },
+          {
+            "test": "MCV",
+            "bad": {
+              "unit": {
+                "got": "/µL",
+                "want": "fL"
+              },
+              "referenceRange": {
+                "got": "150.000 - 400.000",
+                "want": "80 - 100"
+              },
+              "flag": {
+                "got": "low",
+                "want": "normal"
+              }
+            }
+          },
+          {
+            "test": "MCH",
+            "bad": {
+              "unit": {
+                "got": "fl",
+                "want": "pg"
+              },
+              "referenceRange": {
+                "got": "80 - 100",
+                "want": "27 - 34"
+              }
+            }
+          },
+          {
+            "test": "MCHC",
+            "bad": {
+              "referenceRange": {
+                "got": "27 - 34",
+                "want": "32 - 36"
+              }
+            }
+          },
+          {
+            "test": "LED",
+            "bad": {
+              "unit": {
+                "got": "g/dL",
+                "want": "mm/jam"
+              },
+              "referenceRange": {
+                "got": "32 - 36",
+                "want": "0 - 20"
+              },
+              "flag": {
+                "got": "low",
+                "want": "high"
+              }
+            }
+          },
+          {
+            "test": "Eosinofil",
+            "bad": {
+              "unit": {
+                "got": "mm/jam",
+                "want": "%"
+              },
+              "referenceRange": {
+                "got": "0 - 20",
+                "want": "1 - 3"
+              }
+            }
+          },
+          {
+            "test": "Basofil",
+            "bad": {
+              "referenceRange": {
+                "got": "1 - 3",
+                "want": "0 - 1"
+              },
+              "flag": {
+                "got": "low",
+                "want": "normal"
+              }
+            }
+          },
+          {
+            "test": "Neutrofil Segmen",
+            "bad": {
+              "referenceRange": {
+                "got": "0 - 1",
+                "want": "50 - 70"
+              }
+            }
+          },
+          {
+            "test": "Limfosit",
+            "bad": {
+              "referenceRange": {
+                "got": "50 - 70",
+                "want": "20 - 40"
+              }
+            }
+          },
+          {
+            "test": "Monosit",
+            "bad": {
+              "value": {
+                "got": "0",
+                "want": "5"
+              },
+              "referenceRange": {
+                "got": "20 - 40",
+                "want": "2 - 8"
+              },
+              "flag": {
+                "got": "low",
+                "want": "normal"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "variant": "app",
+      "fixture": "c-id-hematologi-foto",
+      "run": 3,
+      "at": "2026-11-10T00:41:43.782Z",
+      "ok": true,
+      "text": "{\"results\":[{\"testName\":\"Hemoglobin\",\"value\":\"10.2\",\"unit\":\"g/dL\",\"referenceRange\":\"12.0 - 16.0\",\"flag\":\"low\"},{\"testName\":\"Leukosit\",\"value\":\"13.800\",\"unit\":\"µL\",\"referenceRange\":\"4.0 - 5.2\",\"flag\":\"high\"},{\"testName\":\"Eritrosit\",\"value\":\"3.9\",\"unit\":\"µL\",\"referenceRange\":\"4.000 - 10.000\",\"flag\":\"low\"},{\"testName\":\"Hematocrit\",\"value\":\"31.5\",\"unit\":\"µL/µL\",\"referenceRange\":\"4.0 - 5.2\",\"flag\":\"high\"},{\"testName\":\"Trombosit\",\"value\":\"31.5\",\"unit\":\"%\",\"referenceRange\":\"20 - 40\",\"flag\":\"normal\"},{\"testName\":\"MCV\",\"value\":\"452.000\",\"unit\":\"µL\",\"referenceRange\":\"36 - 46\",\"flag\":\"high\"},{\"testName\":\"MCH\",\"value\":\"80.8\",\"unit\":\"fl\",\"referenceRange\":\"150.000 - 400.000\",\"flag\":\"low\"},{\"testName\":\"MCHC\",\"value\":\"26.2\",\"unit\":\"fl\",\"referenceRange\":\"80 - 100\",\"flag\":\"low\"},{\"testName\":\"LED\",\"value\":\"32.4\",\"unit\":\"g/dL\",\"referenceRange\":\"27 - 34\",\"flag\":\"normal\"},{\"testName\":\"Eosinofil\",\"value\":\"28\",\"unit\":\"g/dL\",\"referenceRange\":\"32 - 36\",\"flag\":\"low\"},{\"testName\":\"Basofil\",\"value\":\"2\",\"unit\":\"mm/jam\",\"referenceRange\":\"0 - 20\",\"flag\":\"normal\"},{\"testName\":\"Neutrofil Segmen\",\"value\":\"0\",\"unit\":\"%\",\"referenceRange\":\"0 - 1\",\"flag\":\"normal\"},{\"testName\":\"Limfosit\",\"value\":\"78\",\"unit\":\"%\",\"referenceRange\":\"50 - 70\",\"flag\":\"high\"},{\"testName\":\"Monosit\",\"value\":\"15\",\"unit\":\"%\",\"referenceRange\":\"20 - 40\",\"flag\":\"low\"}],\"maskedPii\":[{\"kind\":\"name\",\"placeholder\":\"[name]\"},{\"kind\":\"nik\",\"placeholder\":\"[nik]\"}]}",
+      "image": "1920x990→1024x528",
+      "outChars": 1264,
+      "decodeMs": 183,
+      "createMs": 7,
+      "prefillMs": 2152,
+      "genMs": 25508,
+      "promptMs": 27660,
+      "totalMs": 27850,
+      "score": {
+        "summary": {
+          "jsonValid": true,
+          "rowsOut": 14,
+          "rowsTruth": 14,
+          "rowsMatched": 13,
+          "extraRows": 1,
+          "fieldAcc": 0.386,
+          "perField": {
+            "testName": 0.929,
+            "value": 0.214,
+            "unit": 0.357,
+            "referenceRange": 0.071,
+            "flag": 0.357
+          },
+          "piiKindRecall": 0.333,
+          "piiKindsMissing": [
+            "medical_record_number",
+            "date_of_birth",
+            "address",
+            "phone"
+          ],
+          "piiLeaks": []
+        },
+        "errors": [
+          {
+            "test": "Leukosit",
+            "bad": {
+              "referenceRange": {
+                "got": "4.0 - 5.2",
+                "want": "4.000 - 10.000"
+              }
+            }
+          },
+          {
+            "test": "Eritrosit",
+            "bad": {
+              "unit": {
+                "got": "µL",
+                "want": "juta/µL"
+              },
+              "referenceRange": {
+                "got": "4.000 - 10.000",
+                "want": "4.0 - 5.2"
+              }
+            }
+          },
+          {
+            "test": "Hematokrit",
+            "missing": true
+          },
+          {
+            "test": "Trombosit",
+            "bad": {
+              "value": {
+                "got": "31.5",
+                "want": "452.000"
+              },
+              "unit": {
+                "got": "%",
+                "want": "/µL"
+              },
+              "referenceRange": {
+                "got": "20 - 40",
+                "want": "150.000 - 400.000"
+              },
+              "flag": {
+                "got": "normal",
+                "want": "high"
+              }
+            }
+          },
+          {
+            "test": "MCV",
+            "bad": {
+              "value": {
+                "got": "452.000",
+                "want": "80.8"
+              },
+              "unit": {
+                "got": "µL",
+                "want": "fL"
+              },
+              "referenceRange": {
+                "got": "36 - 46",
+                "want": "80 - 100"
+              },
+              "flag": {
+                "got": "high",
+                "want": "normal"
+              }
+            }
+          },
+          {
+            "test": "MCH",
+            "bad": {
+              "value": {
+                "got": "80.8",
+                "want": "26.2"
+              },
+              "unit": {
+                "got": "fl",
+                "want": "pg"
+              },
+              "referenceRange": {
+                "got": "150.000 - 400.000",
+                "want": "27 - 34"
+              }
+            }
+          },
+          {
+            "test": "MCHC",
+            "bad": {
+              "value": {
+                "got": "26.2",
+                "want": "32.4"
+              },
+              "unit": {
+                "got": "fl",
+                "want": "g/dL"
+              },
+              "referenceRange": {
+                "got": "80 - 100",
+                "want": "32 - 36"
+              },
+              "flag": {
+                "got": "low",
+                "want": "normal"
+              }
+            }
+          },
+          {
+            "test": "LED",
+            "bad": {
+              "value": {
+                "got": "32.4",
+                "want": "28"
+              },
+              "unit": {
+                "got": "g/dL",
+                "want": "mm/jam"
+              },
+              "referenceRange": {
+                "got": "27 - 34",
+                "want": "0 - 20"
+              },
+              "flag": {
+                "got": "normal",
+                "want": "high"
+              }
+            }
+          },
+          {
+            "test": "Eosinofil",
+            "bad": {
+              "value": {
+                "got": "28",
+                "want": "2"
+              },
+              "unit": {
+                "got": "g/dL",
+                "want": "%"
+              },
+              "referenceRange": {
+                "got": "32 - 36",
+                "want": "1 - 3"
+              },
+              "flag": {
+                "got": "low",
+                "want": "normal"
+              }
+            }
+          },
+          {
+            "test": "Basofil",
+            "bad": {
+              "value": {
+                "got": "2",
+                "want": "0"
+              },
+              "unit": {
+                "got": "mm/jam",
+                "want": "%"
+              },
+              "referenceRange": {
+                "got": "0 - 20",
+                "want": "0 - 1"
+              }
+            }
+          },
+          {
+            "test": "Neutrofil Segmen",
+            "bad": {
+              "value": {
+                "got": "0",
+                "want": "78"
+              },
+              "referenceRange": {
+                "got": "0 - 1",
+                "want": "50 - 70"
+              },
+              "flag": {
+                "got": "normal",
+                "want": "high"
+              }
+            }
+          },
+          {
+            "test": "Limfosit",
+            "bad": {
+              "value": {
+                "got": "78",
+                "want": "15"
+              },
+              "referenceRange": {
+                "got": "50 - 70",
+                "want": "20 - 40"
+              },
+              "flag": {
+                "got": "high",
+                "want": "low"
+              }
+            }
+          },
+          {
+            "test": "Monosit",
+            "bad": {
+              "value": {
+                "got": "15",
+                "want": "5"
+              },
+              "referenceRange": {
+                "got": "20 - 40",
+                "want": "2 - 8"
+              },
+              "flag": {
+                "got": "low",
+                "want": "normal"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "variant": "tsv",
+      "fixture": "a-id-hematologi",
+      "run": 1,
+      "at": "2026-11-10T00:43:27.777Z",
+      "ok": false,
+      "error": "TimeoutError: timeout",
+      "outChars": 2718,
+      "totalMs": 60469,
+      "score": {
+        "summary": {
+          "jsonValid": false,
+          "error": "TimeoutError: timeout"
+        }
+      }
+    },
+    {
+      "variant": "tsv",
+      "fixture": "a-id-hematologi",
+      "run": 2,
+      "at": "2026-11-10T00:44:28.324Z",
+      "ok": false,
+      "error": "TimeoutError: timeout",
+      "outChars": 1127,
+      "totalMs": 60130,
+      "score": {
+        "summary": {
+          "jsonValid": false,
+          "error": "TimeoutError: timeout"
+        }
+      }
+    },
+    {
+      "variant": "tsv",
+      "fixture": "a-id-hematologi",
+      "run": 3,
+      "at": "2026-11-10T00:45:28.519Z",
+      "ok": false,
+      "error": "TimeoutError: timeout",
+      "outChars": 2258,
+      "totalMs": 60052,
+      "score": {
+        "summary": {
+          "jsonValid": false,
+          "error": "TimeoutError: timeout"
+        }
+      }
+    },
+    {
+      "variant": "tsv",
+      "fixture": "c-id-hematologi-foto",
+      "run": 1,
+      "at": "2026-11-10T00:46:28.694Z",
+      "ok": false,
+      "error": "TimeoutError: timeout",
+      "outChars": 1412,
+      "totalMs": 60042,
+      "score": {
+        "summary": {
+          "jsonValid": false,
+          "error": "TimeoutError: timeout"
+        }
+      }
+    },
+    {
+      "variant": "tsv",
+      "fixture": "c-id-hematologi-foto",
+      "run": 2,
+      "at": "2026-11-10T00:47:28.819Z",
+      "ok": false,
+      "error": "TimeoutError: timeout",
+      "outChars": 2605,
+      "totalMs": 60058,
+      "score": {
+        "summary": {
+          "jsonValid": false,
+          "error": "TimeoutError: timeout"
+        }
+      }
+    },
+    {
+      "variant": "tsv",
+      "fixture": "c-id-hematologi-foto",
+      "run": 3,
+      "at": "2026-11-10T00:48:28.927Z",
+      "ok": false,
+      "error": "TimeoutError: timeout",
+      "outChars": 1947,
+      "totalMs": 60037,
+      "score": {
+        "summary": {
+          "jsonValid": false,
+          "error": "TimeoutError: timeout"
+        }
+      }
+    }
+  ]
+}

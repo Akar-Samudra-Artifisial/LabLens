@@ -1,0 +1,256 @@
+{
+  "version": "Chrome/157.0.8103.40",
+  "at": "2026-11-10T02:06:17.510Z",
+  "appUrl": "http://localhost:3000/",
+  "runs": [
+    {
+      "fixture": "a-id-hematologi",
+      "ocrContext": false,
+      "run": 1,
+      "at": "2026-11-10T02:04:20.685Z",
+      "metrics": {
+        "ocrMs": 1666,
+        "firstRowMs": 3781,
+        "totalMs": 21154,
+        "rows": 14
+      },
+      "ok": true,
+      "score": {
+        "jsonValid": true,
+        "rowsOut": 14,
+        "rowsTruth": 14,
+        "rowsMatched": 13,
+        "extraRows": 1,
+        "fieldAcc": 0.929,
+        "perField": {
+          "testName": 0.929,
+          "value": 0.929,
+          "unit": 0.929,
+          "referenceRange": 0.929,
+          "flag": 0.929
+        },
+        "piiKindRecall": 1,
+        "piiKindsMissing": [],
+        "piiLeaks": []
+      },
+      "redactedTextLeaks": [],
+      "outboundDuringExtract": 0,
+      "requestsDuringExtract": [],
+      "badge": "Belum ada data dikirim ke cloud"
+    },
+    {
+      "fixture": "a-id-hematologi",
+      "ocrContext": true,
+      "run": 1,
+      "at": "2026-11-10T02:04:43.199Z",
+      "metrics": {
+        "ocrMs": 1312,
+        "firstRowMs": 6158,
+        "totalMs": 22346,
+        "rows": 14
+      },
+      "ok": true,
+      "score": {
+        "jsonValid": true,
+        "rowsOut": 14,
+        "rowsTruth": 14,
+        "rowsMatched": 14,
+        "extraRows": 0,
+        "fieldAcc": 0.971,
+        "perField": {
+          "testName": 1,
+          "value": 1,
+          "unit": 0.857,
+          "referenceRange": 1,
+          "flag": 1
+        },
+        "piiKindRecall": 1,
+        "piiKindsMissing": [],
+        "piiLeaks": []
+      },
+      "redactedTextLeaks": [],
+      "outboundDuringExtract": 0,
+      "requestsDuringExtract": [],
+      "badge": "Belum ada data dikirim ke cloud"
+    },
+    {
+      "fixture": "a-id-hematologi",
+      "explain": true,
+      "requests": 1,
+      "bodyBytes": [
+        1743
+      ],
+      "leaks": []
+    },
+    {
+      "fixture": "b-us-lipid",
+      "ocrContext": false,
+      "run": 1,
+      "at": "2026-11-10T02:04:58.818Z",
+      "metrics": {
+        "ocrMs": 1198,
+        "firstRowMs": 3159,
+        "totalMs": 12254,
+        "rows": 8
+      },
+      "ok": true,
+      "score": {
+        "jsonValid": true,
+        "rowsOut": 8,
+        "rowsTruth": 8,
+        "rowsMatched": 8,
+        "extraRows": 0,
+        "fieldAcc": 0.95,
+        "perField": {
+          "testName": 1,
+          "value": 1,
+          "unit": 1,
+          "referenceRange": 0.875,
+          "flag": 0.875
+        },
+        "piiKindRecall": 1,
+        "piiKindsMissing": [],
+        "piiLeaks": []
+      },
+      "redactedTextLeaks": [],
+      "outboundDuringExtract": 0,
+      "requestsDuringExtract": [],
+      "badge": "Belum ada data dikirim ke cloud"
+    },
+    {
+      "fixture": "b-us-lipid",
+      "ocrContext": true,
+      "run": 1,
+      "at": "2026-11-10T02:05:13.217Z",
+      "metrics": {
+        "ocrMs": 1078,
+        "firstRowMs": 4941,
+        "totalMs": 14232,
+        "rows": 8
+      },
+      "ok": true,
+      "score": {
+        "jsonValid": true,
+        "rowsOut": 8,
+        "rowsTruth": 8,
+        "rowsMatched": 7,
+        "extraRows": 1,
+        "fieldAcc": 0.675,
+        "perField": {
+          "testName": 0.875,
+          "value": 0.875,
+          "unit": 0.875,
+          "referenceRange": 0.75,
+          "flag": 0
+        },
+        "piiKindRecall": 1,
+        "piiKindsMissing": [],
+        "piiLeaks": []
+      },
+      "redactedTextLeaks": [],
+      "outboundDuringExtract": 0,
+      "requestsDuringExtract": [],
+      "badge": "Belum ada data dikirim ke cloud"
+    },
+    {
+      "fixture": "b-us-lipid",
+      "explain": true,
+      "requests": 1,
+      "bodyBytes": [
+        1095
+      ],
+      "leaks": []
+    },
+    {
+      "fixture": "c-id-hematologi-foto",
+      "ocrContext": false,
+      "run": 1,
+      "at": "2026-11-10T02:05:59.901Z",
+      "metrics": {
+        "ocrMs": 1703,
+        "firstRowMs": 3901,
+        "totalMs": 43249,
+        "rows": 14
+      },
+      "ok": true,
+      "score": {
+        "jsonValid": true,
+        "rowsOut": 14,
+        "rowsTruth": 14,
+        "rowsMatched": 14,
+        "extraRows": 0,
+        "fieldAcc": 0.614,
+        "perField": {
+          "testName": 1,
+          "value": 0.929,
+          "unit": 0.429,
+          "referenceRange": 0.071,
+          "flag": 0.643
+        },
+        "piiKindRecall": 1,
+        "piiKindsMissing": [],
+        "piiLeaks": []
+      },
+      "redactedTextLeaks": [],
+      "outboundDuringExtract": 0,
+      "requestsDuringExtract": [],
+      "badge": "Belum ada data dikirim ke cloud"
+    },
+    {
+      "fixture": "c-id-hematologi-foto",
+      "ocrContext": true,
+      "run": 1,
+      "at": "2026-11-10T02:06:14.333Z",
+      "metrics": {
+        "ocrMs": 3781,
+        "firstRowMs": 12395,
+        "totalMs": 14158,
+        "rows": 1
+      },
+      "ok": true,
+      "score": {
+        "jsonValid": true,
+        "rowsOut": 1,
+        "rowsTruth": 14,
+        "rowsMatched": 1,
+        "extraRows": 0,
+        "fieldAcc": 0.029,
+        "perField": {
+          "testName": 0.071,
+          "value": 0.071,
+          "unit": 0,
+          "referenceRange": 0,
+          "flag": 0
+        },
+        "piiKindRecall": 1,
+        "piiKindsMissing": [],
+        "piiLeaks": []
+      },
+      "redactedTextLeaks": [],
+      "outboundDuringExtract": 0,
+      "requestsDuringExtract": [],
+      "badge": "Belum ada data dikirim ke cloud"
+    },
+    {
+      "fixture": "c-id-hematologi-foto",
+      "explain": true,
+      "requests": 1,
+      "bodyBytes": [
+        286
+      ],
+      "leaks": []
+    }
+  ],
+  "network": {
+    "outboundRequests": 3,
+    "hosts": [
+      "firebasevertexai.googleapis.com"
+    ],
+    "maxBodyBytes": 1743,
+    "bodiesWithImage": 0,
+    "tesseractAssetHosts": [
+      "localhost:3000"
+    ],
+    "cspViolations": []
+  }
+}

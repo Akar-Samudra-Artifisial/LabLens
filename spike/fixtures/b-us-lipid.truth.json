@@ -1,0 +1,89 @@
+{
+  "image": "b-us-lipid.png",
+  "variant": "clean",
+  "lang": "en",
+  "results": [
+    {
+      "testName": "Cholesterol, Total",
+      "value": "242",
+      "unit": "mg/dL",
+      "referenceRange": "<200",
+      "flag": "high"
+    },
+    {
+      "testName": "Triglycerides",
+      "value": "189",
+      "unit": "mg/dL",
+      "referenceRange": "<150",
+      "flag": "high"
+    },
+    {
+      "testName": "HDL Cholesterol",
+      "value": "38",
+      "unit": "mg/dL",
+      "referenceRange": ">39",
+      "flag": "low"
+    },
+    {
+      "testName": "LDL Cholesterol (calc)",
+      "value": "166",
+      "unit": "mg/dL",
+      "referenceRange": "<100",
+      "flag": "high"
+    },
+    {
+      "testName": "VLDL Cholesterol (calc)",
+      "value": "38",
+      "unit": "mg/dL",
+      "referenceRange": "5-40",
+      "flag": "normal"
+    },
+    {
+      "testName": "Non-HDL Cholesterol",
+      "value": "204",
+      "unit": "mg/dL",
+      "referenceRange": "<130",
+      "flag": "high"
+    },
+    {
+      "testName": "Hemoglobin A1c",
+      "value": "6.8",
+      "unit": "%",
+      "referenceRange": "<5.7",
+      "flag": "high"
+    },
+    {
+      "testName": "Glucose, Fasting",
+      "value": "131",
+      "unit": "mg/dL",
+      "referenceRange": "65-99",
+      "flag": "high"
+    }
+  ],
+  "pii": [
+    {
+      "kind": "name",
+      "text": "John Michael Carter"
+    },
+    {
+      "kind": "medical_record_number",
+      "text": "00483921"
+    },
+    {
+      "kind": "date_of_birth",
+      "text": "03/22/1968"
+    },
+    {
+      "kind": "address",
+      "text": "1458 Willow Creek Dr, Springfield, IL 62704"
+    },
+    {
+      "kind": "phone",
+      "text": "(217) 555-0143"
+    },
+    {
+      "kind": "other",
+      "text": "Laura Chen, MD"
+    }
+  ]
+}
