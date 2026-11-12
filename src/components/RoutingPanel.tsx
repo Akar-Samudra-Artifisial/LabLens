@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import type { RoutingEvent, RoutingStatus } from "@/lib/ai/router";
 import type { LabTestResult } from "@/lib/ai/schemas";
-import { fmtBytes, PayloadInspector, type PayloadPreview } from "./PayloadInspector";
+import { type FallbackPreview, fmtBytes, PayloadInspector, type PayloadPreview } from "./PayloadInspector";
 import { useOnlineStatus } from "./useOnlineStatus";
 
 function LaptopIcon() {
@@ -67,6 +67,8 @@ interface RoutingPanelProps {
   piiDetectedLocal: number | null;
   preview: PayloadPreview;
   rows: readonly LabTestResult[];
+  /** Pratinjau fallback ekstraksi cloud bila sedang ditawarkan. */
+  fallback?: FallbackPreview | null;
 }
 
 /**
@@ -74,7 +76,7 @@ interface RoutingPanelProps {
  * Framing jujur: guard memblokir payload ber-PII sebelum request, jadi "PII in cloud payloads" adalah hasil re-check guard
  * atas teks yang dikirim (bukan pengukuran independen); jumlah payload yang DIBLOKIR ditampilkan terpisah.
  */
-export function RoutingPanel({ events, piiDetectedLocal, preview, rows }: RoutingPanelProps) {
+export function RoutingPanel({ events, piiDetectedLocal, preview, rows, fallback }: RoutingPanelProps) {
   const [inspecting, setInspecting] = useState(false);
   const inspectorId = useId();
   const sentEvents = events.filter((e) => e.bytesSent > 0);
@@ -165,7 +167,7 @@ export function RoutingPanel({ events, piiDetectedLocal, preview, rows }: Routin
           {inspecting ? "Hide cloud payload" : "Inspect cloud payload"}
         </button>
         <div id={inspectorId} hidden={!inspecting} className="mt-3">
-          {inspecting && <PayloadInspector preview={preview} sent={lastSent} rows={rows} />}
+          {inspecting && <PayloadInspector preview={preview} sent={lastSent} rows={rows} fallback={fallback} />}
         </div>
       </div>
     </section>

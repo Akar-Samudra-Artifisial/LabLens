@@ -2,8 +2,11 @@
 
 import { InferenceSource } from "firebase/ai";
 import {
+  assertFallbackClean,
   assertPayloadClean,
   type CloudPayload,
+  fallbackPiiKinds,
+  type FallbackPayload,
   type KnownPii,
   type PayloadLanguage,
   payloadPiiKinds,
@@ -13,7 +16,13 @@ import {
 } from "../pii";
 import { parseExplanation } from "./explanation";
 import { iterateUntilAborted, raceAbort } from "./abortable";
-import { CLOUD_EXPLAIN_MODEL, getCloudExplainModel, getOnDeviceExtractionModel } from "./models";
+import {
+  CLOUD_EXPLAIN_MODEL,
+  CLOUD_EXTRACT_MODEL,
+  getCloudExplainModel,
+  getCloudExtractionModel,
+  getOnDeviceExtractionModel,
+} from "./models";
 import { fileToInlineData } from "./prompt-api";
 import {
   flagFromRange,
@@ -40,11 +49,14 @@ export interface ExtractStages {
 /** ok = selesai; error = gagal (timeout, jaringan, respons tak valid); blocked = guard PII menolak, tidak ada request. */
 export type RoutingStatus = "ok" | "error" | "blocked";
 
-/** Payload persis yang diteruskan ke SDK (teks sama dengan argumen generateContent). */
+/** Payload persis yang diteruskan ke SDK (teks sama dengan argumen generateContent / generateContentStream). */
 export interface SentPayload {
+  step: "extract" | "explain";
   text: string;
-  language: PayloadLanguage;
+  /** Hanya explain (bahasa output); ekstraksi fallback tidak punya pilihan bahasa. */
+  language?: PayloadLanguage;
   bytes: number;
+  /** Explain: baris hasil yang dikirim. Extract: baris teks OCR termasking yang dikirim. */
   rows: number;
   model: string;
 }
@@ -210,6 +222,114 @@ export async function extractOnDevice(file: File, opts: ExtractOptions = {}): Pr
   }
 }
 
+/** Batas waktu fallback ekstraksi cloud (teks ±1 KB → JSON ±1,5 KB). */
+export const CLOUD_EXTRACT_TIMEOUT_MS = 60_000;
+
+export interface CloudExtractOptions {
+  signal?: AbortSignal;
+  onRow?: (row: LabTestResult, index: number) => void;
+  /** Nilai PII dokumen (lokal) — guard dijalankan ulang atas teks final tepat sebelum request. */
+  known?: KnownPii;
+  piiDetectedLocal?: number;
+}
+
+/** Fallback dikunci / guard menolak saat menyusun teks (sebelum ada payload) — tidak ada request. Tanpa isi dokumen. */
+export function recordExtractBlocked(message: string, opts: Pick<CloudExtractOptions, "piiDetectedLocal"> = {}): void {
+  record({
+    step: "extract",
+    location: InferenceSource.IN_CLOUD,
+    piiDetectedLocal: opts.piiDetectedLocal,
+    latencyMs: 0,
+    ok: false,
+    status: "blocked",
+    error: `${message} Nothing left the device.`,
+    bytesSent: 0,
+    piiSent: 0,
+  });
+}
+
+/** Output model cloud harus `{ results: [...] }` (objek per baris); selain itu error "invalid response" tanpa isi output. */
+function parseCloudResults(text: string): LabExtractionLean["results"] {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error("Cloud extraction returned an invalid response (not valid JSON).");
+  }
+  const results = typeof data === "object" && data !== null ? (data as { results?: unknown }).results : undefined;
+  if (!Array.isArray(results) || !results.every((r) => typeof r === "object" && r !== null && !Array.isArray(r))) {
+    throw new Error("Cloud extraction returned an invalid response (results is not a list of rows).");
+  }
+  return results as LabExtractionLean["results"];
+}
+
+/**
+ * Fallback ekstraksi cloud (persetujuan eksplisit pengguna) saat Gemini Nano tidak tersedia/gagal: hanya TEKS OCR
+ * termasking dari `buildFallbackText`, tanpa gambar. Guard dijalankan ulang di sini; cocok → blocked, tidak ada request.
+ * Output di-stream dan diproses seperti hasil Nano (flag dihitung lokal dari rentang rujukan).
+ */
+export async function extractInCloud(fallback: FallbackPayload, opts: CloudExtractOptions = {}): Promise<LabExtraction> {
+  const start = performance.now();
+  const base = { step: "extract", location: InferenceSource.IN_CLOUD, piiDetectedLocal: opts.piiDetectedLocal } as const;
+  try {
+    assertFallbackClean(fallback.text, opts.known);
+  } catch (e) {
+    record({ ...base, latencyMs: elapsed(start), ok: false, status: "blocked", error: errMsg(e), bytesSent: 0, piiSent: 0 });
+    throw e;
+  }
+  opts.signal?.throwIfAborted();
+  const piiSent = fallbackPiiKinds(fallback.text, opts.known).length;
+  const bytes = utf8Bytes(fallback.text);
+  const sent: SentPayload = { step: "extract", text: fallback.text, bytes, rows: fallback.lines, model: CLOUD_EXTRACT_MODEL };
+  const sentFields = { bytesSent: bytes, piiSent, payload: sent };
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(
+    () => ctrl.abort(new DOMException(`Cloud extraction took longer than ${CLOUD_EXTRACT_TIMEOUT_MS / 1000} s`, "TimeoutError")),
+    CLOUD_EXTRACT_TIMEOUT_MS,
+  );
+  const onExternalAbort = () => ctrl.abort(new DOMException("Cancelled by the user", "AbortError"));
+  opts.signal?.addEventListener("abort", onExternalAbort, { once: true });
+  const stages: ExtractStages = {};
+  let location: InferenceSource = InferenceSource.IN_CLOUD;
+  // Placeholder "Test N" → nama asli dokumen, dipetakan di perangkat (nama asli tidak pernah dikirim).
+  const localName = (name: unknown) => {
+    const s = String(name ?? "");
+    return Object.hasOwn(fallback.localNames, s) ? fallback.localNames[s] : s;
+  };
+  try {
+    const result = await raceAbort(getCloudExtractionModel().generateContentStream(fallback.text, { signal: ctrl.signal }), ctrl.signal);
+    result.response.catch(() => {});
+    const rows = createResultsStreamParser<Omit<LabTestResult, "flag">>();
+    let rowCount = 0;
+    let text = "";
+    for await (const chunk of iterateUntilAborted(result.stream, ctrl.signal)) {
+      stages.prefillMs ??= elapsed(start);
+      if (chunk.inferenceSource) location = chunk.inferenceSource;
+      const value = chunk.text();
+      text += value;
+      for (const r of rows.push(value)) {
+        stages.firstRowMs ??= elapsed(start);
+        opts.onRow?.({ ...r, testName: localName(r.testName), flag: flagFromRange(String(r.value ?? ""), String(r.referenceRange ?? "")) }, rowCount++);
+      }
+      if (text.length > EXTRACT_MAX_CHARS * 2) {
+        ctrl.abort(new DOMException("Model output too long (degenerate)", "QuotaExceededError"));
+      }
+    }
+    const results = parseCloudResults(text).map((r) => ({ ...r, testName: localName(r.testName) }));
+    const parsed = fromLeanExtraction({ results, piiKinds: [] });
+    record({ ...base, ...sentFields, location, latencyMs: elapsed(start), ok: true, status: "ok", stages });
+    return parsed;
+  } catch (e) {
+    const err = ctrl.signal.aborted ? ctrl.signal.reason : e;
+    record({ ...base, ...sentFields, location, latencyMs: elapsed(start), ok: false, status: "error", error: errMsg(err), stages });
+    throw err instanceof Error ? err : new Error(String(err));
+  } finally {
+    clearTimeout(timer);
+    opts.signal?.removeEventListener("abort", onExternalAbort);
+  }
+}
+
 const SPAN_TO_PII_KIND: Readonly<Record<PiiSpanKind, PiiKind>> = {
   name: "name",
   nik: "nik",
@@ -276,7 +396,7 @@ export async function explainInCloud(payload: CloudPayload, known?: KnownPii, op
   const piiSent = payloadPiiKinds(payload.text, known).length;
   // Ukuran dihitung ulang dari teks yang benar-benar diteruskan ke SDK, bukan dipercaya dari builder.
   const bytes = utf8Bytes(payload.text);
-  const sent: SentPayload = { text: payload.text, language: payload.language, bytes, rows: payload.sentRows, model: CLOUD_EXPLAIN_MODEL };
+  const sent: SentPayload = { step: "explain", text: payload.text, language: payload.language, bytes, rows: payload.sentRows, model: CLOUD_EXPLAIN_MODEL };
   const sentFields = { bytesSent: bytes, piiSent, payload: sent };
 
   let response;

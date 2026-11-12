@@ -185,6 +185,25 @@ export function flagFromRange(value: string, range: string): LabFlag {
   return "unknown";
 }
 
+/**
+ * Skema cloud untuk fallback ekstraksi dari teks OCR termasking (tanpa gambar). Hanya 4 field per baris:
+ * flag dihitung lokal (flagFromRange) dan jenis PII dari aturan lokal (mergeMaskedPii), bukan dari model.
+ */
+export const labExtractionCloudSchema = Schema.object({
+  properties: {
+    results: Schema.array({
+      items: Schema.object({
+        properties: {
+          testName: Schema.string(),
+          value: Schema.string(),
+          unit: Schema.string(),
+          referenceRange: Schema.string(),
+        },
+      }),
+    }),
+  },
+});
+
 /** Petakan output lean on-device ke kontrak LabExtraction. */
 export function fromLeanExtraction(lean: LabExtractionLean): LabExtraction {
   const kinds = [...new Set(lean.piiKinds ?? [])].filter((k): k is PiiKind => PII_KINDS.includes(k));

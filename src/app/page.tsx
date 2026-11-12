@@ -5,28 +5,33 @@ import { CriticalBanner } from "@/components/CriticalBanner";
 import { ExplanationView } from "@/components/ExplanationView";
 import { FlagBadge } from "@/components/FlagBadge";
 import { MedicalDisclaimer } from "@/components/MedicalDisclaimer";
-import type { PayloadPreview } from "@/components/PayloadInspector";
+import type { FallbackPreview, PayloadPreview } from "@/components/PayloadInspector";
 import { RoutingPanel } from "@/components/RoutingPanel";
 import { warmUpOnDeviceModel } from "@/lib/ai/models";
 import { ON_DEVICE_CREATE_OPTIONS, promptApi } from "@/lib/ai/prompt-api";
 import {
+  CLOUD_EXTRACT_TIMEOUT_MS,
   EXTRACT_TIMEOUT_MS,
   type ExtractStage,
   explainInCloud,
+  extractInCloud,
   extractOnDevice,
   mergeMaskedPii,
   type RoutingEvent,
   recordExplainBlocked,
+  recordExtractBlocked,
   subscribeRouting,
 } from "@/lib/ai/router";
 import { EXPLAIN_LANGUAGES, type ExplainLanguage, type ExplanationResult, type LabExtraction, type LabTestResult } from "@/lib/ai/schemas";
 import { runOcr, warmUpOcr } from "@/lib/ocr/tesseract";
 import {
   buildCloudPayload,
+  buildFallbackText,
   countByKind,
   detectPii,
   type KnownPii,
   knownPiiFrom,
+  type OcrPage,
   type PiiDetection,
   PiiLeakError,
   type PiiSpanKind,
@@ -47,6 +52,34 @@ async function checkOnDevice(): Promise<string> {
 }
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+/** Penjelasan status Prompt API untuk banner (bukan error: fallback cloud privat tetap tersedia). */
+function nanoReason(availability: string): string {
+  if (availability.startsWith("unavailable (")) return "this browser has no built-in Prompt API.";
+  if (availability === "unavailable") return "Chrome reports Gemini Nano as unavailable on this device (hardware, OS or disk-space requirements).";
+  if (availability === "downloadable") return "Gemini Nano is supported here but has not been downloaded yet.";
+  if (availability === "downloading") return "Chrome is still downloading Gemini Nano.";
+  return `the Prompt API returned an error (${availability.replace(/^error: /, "")}).`;
+}
+
+/** Laporan sintetis (data fiktif) di public/samples — sama dengan fixture spike. */
+const SAMPLES = [
+  { file: "a-id-hematologi.png", label: "Try sample (ID hematology)" },
+  { file: "b-us-lipid.png", label: "Try sample (US lipid)" },
+] as const;
+
+/** Hasil OCR + aturan PII dokumen aktif (hanya di memori tab ini) — sumber teks fallback cloud. */
+interface OcrDoc {
+  page: OcrPage;
+  det: PiiDetection;
+  known: KnownPii;
+}
+
+/** Pesan kunci fallback tanpa isi dokumen (hanya jenis PII). */
+const fallbackLockMessage = (e: unknown) =>
+  e instanceof PiiLeakError
+    ? `The PII guard still found identity data in the masked text (${e.kinds.join(", ")}). Cloud extraction is locked for this document.`
+    : errText(e);
 
 const STAGE_LABEL: Record<ExtractStage, string> = {
   prep: "preparing image…",
@@ -126,6 +159,21 @@ export default function Home() {
   const [explainGate] = useState(createLatestGate);
   // Nilai PII asli dokumen aktif — hanya di memori tab ini, dipakai guard sebelum cloud.
   const [known, setKnown] = useState<KnownPii | null>(null);
+  const [ocrDoc, setOcrDoc] = useState<OcrDoc | null>(null);
+  /** Ditawarkan bila Nano tidak tersedia/gagal: pratinjau teks termasking atau alasan kunci. */
+  const [fallback, setFallback] = useState<FallbackPreview | null>(null);
+  /** device = OCR + Nano; ocr = hanya OCR + aturan PII (Nano tidak tersedia); cloud = fallback ekstraksi cloud. */
+  const [busyMode, setBusyMode] = useState<"device" | "ocr" | "cloud">("device");
+  /** Teks termasking dokumen aktif sudah dikirim untuk ekstraksi cloud (untuk badge). */
+  const [extractedInCloud, setExtractedInCloud] = useState(false);
+  const nanoKnown = availability !== "checking…";
+  const nanoReady = availability === "available";
+  const [sample, setSample] = useState<string | null>(null);
+  const [sampleError, setSampleError] = useState<string | null>(null);
+  const [sampleLoading, setSampleLoading] = useState(false);
+  const [sampleGate] = useState(createLatestGate);
+  /** Ganti key → input file di-reset saat sampel dimuat (agar tidak menampilkan nama file lama). */
+  const [inputKey, setInputKey] = useState(0);
 
   useEffect(() => {
     checkOnDevice().then((a) => {
@@ -155,7 +203,43 @@ export default function Home() {
     if (ocr) URL.revokeObjectURL(ocr.imageUrl);
   }, [ocr]);
 
-  async function onExtract() {
+  async function onSample(name: string) {
+    if (busy || sampleLoading) return;
+    // Klik ganda / pilih file manual saat sampel masih diunduh → hanya permintaan terbaru yang dipakai.
+    const token = sampleGate.next();
+    setSampleLoading(true);
+    setSampleError(null);
+    try {
+      const res = await fetch(`/samples/${name}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      if (!sampleGate.isCurrent(token)) return;
+      setFile(new File([blob], name, { type: "image/png" }));
+      setSample(name);
+      setInputKey((k) => k + 1);
+    } catch (e) {
+      if (sampleGate.isCurrent(token)) setSampleError(`Could not load the sample report: ${errText(e)}`);
+    } finally {
+      if (sampleGate.isCurrent(token)) setSampleLoading(false);
+    }
+  }
+
+  /** Susun teks fallback (guard ikut jalan). Gagal → kunci + event routing "blocked", tanpa request. */
+  function prepareFallback(doc: OcrDoc, piiLocal: number): FallbackPreview {
+    try {
+      return { state: "ready", payload: buildFallbackText(doc.page, doc.det, doc.known) };
+    } catch (e) {
+      const reason = fallbackLockMessage(e);
+      recordExtractBlocked(reason, { piiDetectedLocal: piiLocal });
+      return { state: "locked", reason };
+    }
+  }
+
+  /**
+   * useNano=false: Nano tidak tersedia → hanya OCR + aturan PII lokal, lalu fallback cloud ditawarkan (tidak otomatis).
+   * useNano=true: OCR paralel dengan Nano; Nano gagal → fallback juga ditawarkan.
+   */
+  async function onExtract(useNano: boolean) {
     if (!file || explain.status === "running") return;
     explainGate.invalidate();
     const ctrl = new AbortController();
@@ -163,6 +247,10 @@ export default function Home() {
     const t0 = performance.now();
     const since = () => Math.round(performance.now() - t0);
     setKnown(null);
+    setOcrDoc(null);
+    setFallback(null);
+    setExtractedInCloud(false);
+    setBusyMode(useNano ? "device" : "ocr");
     setBusy(true);
     setElapsedS(0);
     setError(null);
@@ -181,10 +269,12 @@ export default function Home() {
           const det = detectPii(o.page);
           const blob = await redactedImageBlob(o.image, o.page, det);
           const text = redactText(o.page, det);
-          setKnown(knownPiiFrom(o.page, det));
+          const knownPii = knownPiiFrom(o.page, det);
+          setKnown(knownPii);
+          setOcrDoc({ page: o.page, det, known: knownPii });
           setOcr({ ms: o.ms, text, imageUrl: URL.createObjectURL(blob), counts: countByKind(det), reviewRequired: det.reviewRequired });
           setMetrics((m) => ({ ...m, ocrMs: since() }));
-          return { det, text };
+          return { det, text, doc: { page: o.page, det, known: knownPii } satisfies OcrDoc };
         } finally {
           o.image.close();
         }
@@ -192,33 +282,49 @@ export default function Home() {
       // Ekstraksi Nano: paralel dengan OCR, kecuali teks OCR dipakai sebagai konteks. OCR gagal tidak
       // menggagalkan Nano — Nano jalan tanpa konteks.
       let streamed = 0;
-      const nanoP = (async () => {
-        const ocrText = ocrContext ? await ocrP.then((o) => o.text).catch(() => undefined) : undefined;
-        return extractOnDevice(file, {
-          signal: ctrl.signal,
-          onStage: setStage,
-          ocrText,
-          onRow: (row) => {
-            streamed++;
-            setMetrics((m) => (m.firstRowMs === undefined ? { ...m, firstRowMs: since() } : m));
-            setRows((prev) => [...prev, row]);
-          },
-        });
-      })();
+      const nanoP: Promise<LabExtraction | null> = useNano
+        ? (async () => {
+            const ocrText = ocrContext ? await ocrP.then((o) => o.text).catch(() => undefined) : undefined;
+            return extractOnDevice(file, {
+              signal: ctrl.signal,
+              onStage: setStage,
+              ocrText,
+              onRow: (row) => {
+                streamed++;
+                setMetrics((m) => (m.firstRowMs === undefined ? { ...m, firstRowMs: since() } : m));
+                setRows((prev) => [...prev, row]);
+              },
+            });
+          })()
+        : Promise.resolve(null);
 
       const [ocrRes, nanoRes] = await Promise.allSettled([ocrP, nanoP]);
       let det: PiiDetection | null = null;
       if (ocrRes.status === "fulfilled") det = ocrRes.value.det;
-      else setOcrError(`OCR failed: ${errText(ocrRes.reason)} — cloud explanation disabled.`);
-      if (nanoRes.status === "fulfilled") {
+      else setOcrError(`OCR failed: ${errText(ocrRes.reason)} — cloud steps disabled.`);
+      if (nanoRes.status === "fulfilled" && nanoRes.value) {
         const merged = mergeMaskedPii(nanoRes.value, det);
         setResult(merged);
         setRows(merged.results);
         setMetrics((m) => ({ ...m, totalMs: since(), rows: merged.results.length }));
-      } else {
-        setError(errText(nanoRes.reason));
-        if (streamed > 0) setPartial(`${errText(nanoRes.reason)} — ${streamed} partial rows, not validated, not sent to the cloud`);
+      } else if (ctrl.signal.aborted) {
+        // Dibatalkan pengguna: bukan kegagalan, dan fallback cloud tidak ditawarkan untuk proses yang dibatalkan.
+        setError("Extraction cancelled. Nothing was sent to the cloud.");
+        if (streamed > 0) setPartial(`Cancelled — ${streamed} partial rows, not validated, not sent to the cloud`);
         setMetrics((m) => ({ ...m, totalMs: since() }));
+      } else {
+        if (nanoRes.status === "rejected") {
+          setError(`On-device extraction failed: ${errText(nanoRes.reason)}`);
+          if (streamed > 0) setPartial(`${errText(nanoRes.reason)} — ${streamed} partial rows, not validated, not sent to the cloud`);
+        }
+        setMetrics((m) => ({ ...m, totalMs: since() }));
+        // Fallback hanya ditawarkan; tidak ada yang dikirim sampai pengguna menekan tombolnya.
+        if (ocrRes.status === "fulfilled") {
+          const piiLocal = Object.values(countByKind(ocrRes.value.det)).reduce((n, c) => n + (c ?? 0), 0);
+          setFallback(prepareFallback(ocrRes.value.doc, piiLocal));
+        } else {
+          setFallback({ state: "locked", reason: "Local OCR did not finish, so there is no masked text to send." });
+        }
       }
     } catch (e) {
       setError(errText(e));
@@ -232,6 +338,71 @@ export default function Home() {
   /** Cloud hanya boleh dipakai bila OCR + aturan PII berhasil dan batas tabel ditemukan (fail-closed). */
   const cloudLocked = !known || !ocr || ocr.reviewRequired;
   const piiDetectedLocal = ocr ? Object.values(ocr.counts).reduce((n, c) => n + (c ?? 0), 0) : null;
+
+  /** Persetujuan eksplisit: kirim HANYA teks tabel termasking (tanpa gambar) ke Gemini cloud lewat Firebase AI Logic. */
+  async function onCloudExtract() {
+    if (!ocrDoc || fallback?.state !== "ready" || busy || explain.status === "running") return;
+    explainGate.invalidate();
+    const piiLocal = piiDetectedLocal ?? undefined;
+    // Disusun ulang saat klik (bukan memakai pratinjau) agar guard selalu berjalan atas data terbaru.
+    let payload;
+    try {
+      payload = buildFallbackText(ocrDoc.page, ocrDoc.det, ocrDoc.known);
+    } catch (e) {
+      const reason = fallbackLockMessage(e);
+      recordExtractBlocked(reason, { piiDetectedLocal: piiLocal });
+      setFallback({ state: "locked", reason });
+      return;
+    }
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    const t0 = performance.now();
+    const since = () => Math.round(performance.now() - t0);
+    setBusyMode("cloud");
+    setBusy(true);
+    setElapsedS(0);
+    setError(null);
+    setRows([]);
+    setPartial(null);
+    setResult(null);
+    setExplain({ status: "idle" });
+    setMetrics((m) => ({ ocrMs: m.ocrMs }));
+    let streamed = 0;
+    setExtractedInCloud(false);
+    try {
+      const extraction = await extractInCloud(payload, {
+        signal: ctrl.signal,
+        known: ocrDoc.known,
+        piiDetectedLocal: piiLocal,
+        onRow: (row) => {
+          // Banner "sent" baru tampil setelah cloud benar-benar membalas (baris pertama), bukan sebelum request.
+          if (streamed === 0) setExtractedInCloud(true);
+          streamed++;
+          setMetrics((m) => (m.firstRowMs === undefined ? { ...m, firstRowMs: since() } : m));
+          setRows((prev) => [...prev, row]);
+        },
+      });
+      const merged = mergeMaskedPii(extraction, ocrDoc.det);
+      setExtractedInCloud(true);
+      setResult(merged);
+      setRows(merged.results);
+      setMetrics((m) => ({ ...m, totalMs: since(), rows: merged.results.length }));
+    } catch (e) {
+      if (ctrl.signal.aborted && !(e instanceof PiiLeakError)) {
+        setError("Cloud extraction cancelled.");
+        if (streamed > 0) setPartial(`Cancelled — ${streamed} partial rows, not validated, not sent for explanation`);
+        setMetrics((m) => ({ ...m, totalMs: since() }));
+        return;
+      }
+      if (e instanceof PiiLeakError) setFallback({ state: "locked", reason: fallbackLockMessage(e) });
+      setError(`Cloud extraction failed: ${errText(e)}`);
+      if (streamed > 0) setPartial(`${errText(e)} — ${streamed} partial rows, not validated, not sent for explanation`);
+      setMetrics((m) => ({ ...m, totalMs: since() }));
+    } finally {
+      abortRef.current = null;
+      setBusy(false);
+    }
+  }
 
   /** Pratinjau = buildCloudPayload yang sama dengan onExplain (allowlist + guard), untuk Inspect sebelum kirim. */
   const preview = useMemo<PayloadPreview>(() => {
@@ -287,7 +458,9 @@ export default function Home() {
             }
           : cloudLocked && (ocr || ocrError)
             ? { cls: "bg-amber-700", text: "Cloud disabled — review manually" }
-            : { cls: "bg-zinc-600", text: "Nothing sent to the cloud yet" };
+            : extractedInCloud
+              ? { cls: "bg-emerald-800", text: "Guard passed — masked table text (no image) sent for cloud extraction" }
+              : { cls: "bg-zinc-600", text: "Nothing sent to the cloud yet" };
 
   const fmtS = (ms?: number) => (ms === undefined ? "–" : `${(ms / 1000).toFixed(1)} s`);
   const explainDisabled = !result || cloudLocked || busy || explain.status === "running";
@@ -309,42 +482,111 @@ export default function Home() {
               </>
             )}
           </p>
+          {nanoKnown && !nanoReady && (
+            <div
+              className="mt-2 rounded-md border border-sky-300 bg-sky-50 p-3 text-sm text-sky-950 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100"
+              role="status"
+              data-testid="nano-banner"
+            >
+              <p className="font-medium">On-device AI is not ready in this browser — LabLens still works.</p>
+              <p className="mt-1">
+                Why: {nanoReason(availability)} On-device extraction needs desktop Chrome 139 or newer with Gemini Nano (built-in
+                Prompt API).
+              </p>
+              <p className="mt-1">
+                Fallback: OCR and identity masking still run on this device. You can then choose <strong>private cloud extraction</strong>
+                : only the masked text of the results table is sent — never the image, the report header or footer.
+              </p>
+            </div>
+          )}
         </header>
 
         <section aria-labelledby="upload-heading" className={`${CARD} flex flex-col gap-3`}>
           <h2 id="upload-heading" className="font-medium">
             1 · Read report on device
           </h2>
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Sample reports">
+            {SAMPLES.map((s) => (
+              <button key={s.file} type="button" className={BTN_SECONDARY} disabled={busy || sampleLoading} onClick={() => onSample(s.file)}>
+                {s.label}
+              </button>
+            ))}
+            <span className={`text-xs ${MUTED}`}>Synthetic reports with fictitious patients — no real data.</span>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex flex-col gap-1 text-sm">
               <span>Lab report image (JPEG or PNG)</span>
               <input
+                key={inputKey}
                 type="file"
                 accept="image/jpeg,image/png"
+                disabled={busy}
                 className={`text-sm file:mr-3 file:rounded-md file:border file:border-zinc-300 file:bg-transparent file:px-3 file:py-1.5 file:text-sm dark:file:border-zinc-700 ${FOCUS}`}
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                onChange={(e) => {
+                  sampleGate.invalidate();
+                  setSampleLoading(false);
+                  setFile(e.target.files?.[0] ?? null);
+                  setSample(null);
+                }}
               />
             </label>
-            <button type="button" className={BTN_PRIMARY} disabled={!file || busy || explain.status === "running"} onClick={onExtract}>
-              {busy ? "Reading…" : "Extract (on-device)"}
-            </button>
+            {nanoReady ? (
+              <button type="button" className={BTN_PRIMARY} disabled={!file || busy || explain.status === "running"} onClick={() => onExtract(true)}>
+                {busy ? "Reading…" : "Extract (on-device)"}
+              </button>
+            ) : (
+              <>
+                <button type="button" className={BTN_PRIMARY} disabled={!file || busy || explain.status === "running"} onClick={() => onExtract(false)}>
+                  {busy && busyMode === "ocr" ? "Reading…" : "Read & mask on device"}
+                </button>
+                {availability === "downloadable" ? (
+                  <button type="button" className={BTN_SECONDARY} disabled={!file || busy || explain.status === "running"} onClick={() => onExtract(true)}>
+                    Download Gemini Nano &amp; extract on-device
+                  </button>
+                ) : (
+                  <button type="button" className={BTN_SECONDARY} disabled title="Gemini Nano is not available in this browser">
+                    Extract (on-device) — needs Gemini Nano
+                  </button>
+                )}
+              </>
+            )}
             {busy && (
               <button type="button" className={BTN_SECONDARY} onClick={() => abortRef.current?.abort()}>
                 Cancel
               </button>
             )}
           </div>
-          <label className="flex items-center gap-2 text-xs">
-            <input type="checkbox" checked={ocrContext} disabled={busy} onChange={(e) => setOcrContext(e.target.checked)} />
-            give redacted OCR text to Nano as context (experimental)
-          </label>
+          {file && (
+            <p className={`text-xs ${MUTED}`} data-testid="selected-file">
+              Selected: <span className="font-mono">{file.name}</span>
+              {sample && " (synthetic sample, fictitious data)"}
+            </p>
+          )}
+          {sampleError && (
+            <p className="text-sm text-red-700 dark:text-red-400" role="alert">
+              {sampleError}
+            </p>
+          )}
+          {nanoReady && (
+            <label className="flex items-center gap-2 text-xs">
+              <input type="checkbox" checked={ocrContext} disabled={busy} onChange={(e) => setOcrContext(e.target.checked)} />
+              give redacted OCR text to Nano as context (experimental)
+            </label>
+          )}
           <p className="text-sm" aria-live="polite">
-            {busy && (
-              <>
-                {ocr ? "OCR done · " : "Local OCR… · "}
-                {stage ? STAGE_LABEL[stage] : "starting…"} {elapsedS} s / max {EXTRACT_TIMEOUT_MS / 1000} s
-              </>
-            )}
+            {busy &&
+              (busyMode === "cloud" ? (
+                <>
+                  Private cloud extraction (masked text only)… {elapsedS} s / max {CLOUD_EXTRACT_TIMEOUT_MS / 1000} s
+                </>
+              ) : busyMode === "ocr" ? (
+                <>Local OCR and identity masking… {elapsedS} s</>
+              ) : (
+                <>
+                  {ocr ? "OCR done · " : "Local OCR… · "}
+                  {stage ? STAGE_LABEL[stage] : "starting…"} {elapsedS} s / max {EXTRACT_TIMEOUT_MS / 1000} s
+                </>
+              ))}
           </p>
           <p className={`font-mono text-xs ${MUTED}`} data-testid="metrics" data-metrics={JSON.stringify(metrics)}>
             OCR+redact {fmtS(metrics.ocrMs)} · first row {fmtS(metrics.firstRowMs)} · total {fmtS(metrics.totalMs)}
@@ -358,6 +600,40 @@ export default function Home() {
             <p className="text-sm text-red-700 dark:text-red-400" role="alert">
               {ocrError}
             </p>
+          )}
+          {fallback && !result && (
+            <div className="flex flex-col gap-2 rounded-md border border-sky-300 p-3 dark:border-sky-800" data-testid="cloud-fallback">
+              <p className="text-sm font-medium">Private cloud extraction (fallback)</p>
+              {fallback.state === "locked" ? (
+                <p className="text-sm text-amber-800 dark:text-amber-300" role="alert" data-testid="fallback-locked">
+                  {fallback.reason} Nothing was sent.
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm">
+                    Sends only the masked OCR text of the results table ({fallback.payload.lines} lines, {fallback.payload.bytes.toLocaleString("en-US")} B)
+                    to Gemini in the cloud through Firebase AI Logic. No image, no report header or footer; identity data is replaced by
+                    placeholders and the PII guard re-checks the text before sending.
+                  </p>
+                  <details className="text-xs">
+                    <summary className={`cursor-pointer ${FOCUS}`}>Show exactly what will be sent</summary>
+                    <pre
+                      tabIndex={0}
+                      aria-label="Masked text for cloud extraction"
+                      className={`mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-zinc-100 p-2 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 ${FOCUS}`}
+                      data-testid="fallback-text"
+                    >
+                      {fallback.payload.text}
+                    </pre>
+                  </details>
+                  <div>
+                    <button type="button" className={BTN_PRIMARY} disabled={busy || explain.status === "running"} onClick={onCloudExtract}>
+                      {busy && busyMode === "cloud" ? "Extracting…" : "Extract via private cloud (masked text)"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </section>
 
@@ -501,7 +777,7 @@ export default function Home() {
       </div>
 
       <aside className="min-w-0 lg:sticky lg:top-8">
-        <RoutingPanel events={events} piiDetectedLocal={piiDetectedLocal} preview={preview} rows={rows} />
+        <RoutingPanel events={events} piiDetectedLocal={piiDetectedLocal} preview={preview} rows={rows} fallback={fallback} />
       </aside>
     </main>
   );

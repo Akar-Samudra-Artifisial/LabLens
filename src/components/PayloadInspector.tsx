@@ -1,6 +1,6 @@
 import type { SentPayload } from "@/lib/ai/router";
 import type { LabTestResult } from "@/lib/ai/schemas";
-import type { CloudPayload, DropReason } from "@/lib/pii";
+import type { CloudPayload, DropReason, FallbackPayload } from "@/lib/pii";
 
 /** Pratinjau payload dari buildCloudPayload yang sama dengan yang dipakai tombol Explain. */
 export type PayloadPreview =
@@ -8,6 +8,9 @@ export type PayloadPreview =
   | { state: "ready"; payload: CloudPayload }
   | { state: "blocked"; kinds: readonly string[] }
   | { state: "empty"; message: string };
+
+/** Pratinjau fallback ekstraksi cloud (buildFallbackText yang sama dengan tombol "Extract via private cloud"). */
+export type FallbackPreview = { state: "ready"; payload: FallbackPayload } | { state: "locked"; reason: string };
 
 const DROP_REASON: Readonly<Record<DropReason, string>> = {
   unknown_test: "test name not in the lab-test dictionary",
@@ -51,16 +54,42 @@ interface PayloadInspectorProps {
   sent: SentPayload | null;
   /** Baris lokal — hanya untuk menamai baris yang di-drop (tidak dikirim ke mana pun). */
   rows: readonly LabTestResult[];
+  /** Hanya saat Gemini Nano tidak tersedia/gagal dan fallback ekstraksi cloud ditawarkan. */
+  fallback?: FallbackPreview | null;
 }
 
 /** US-10: payload persis SEBELUM kirim (pratinjau) dan SESUDAH kirim (teks yang diteruskan ke generateContent). */
-export function PayloadInspector({ preview, sent, rows }: PayloadInspectorProps) {
-  const identical = sent && preview.state === "ready" ? sent.text === preview.payload.text : null;
+export function PayloadInspector({ preview, sent, rows, fallback }: PayloadInspectorProps) {
+  const previewText = sent?.step === "extract" ? (fallback?.state === "ready" ? fallback.payload.text : null) : preview.state === "ready" ? preview.payload.text : null;
+  const identical = sent && previewText !== null ? sent.text === previewText : null;
   return (
     <div className="flex flex-col gap-4 text-sm">
+      {fallback && (
+        <section aria-labelledby="fallback-before" className="flex flex-col gap-2">
+          <h4 id="fallback-before" className="font-medium">
+            Before sending — private cloud extraction
+          </h4>
+          {fallback.state === "locked" ? (
+            <p className="text-amber-800 dark:text-amber-300">{fallback.reason}</p>
+          ) : (
+            <>
+              <Meta
+                items={[
+                  ["Lines sent", String(fallback.payload.lines)],
+                  ["Lines removed", String(fallback.payload.droppedLines)],
+                  ["Image", "not sent"],
+                  ["Size", fmtBytes(fallback.payload.bytes)],
+                ]}
+              />
+              <PayloadText text={fallback.payload.text} label="Cloud extraction payload preview" testId="fallback-preview" />
+            </>
+          )}
+        </section>
+      )}
+
       <section aria-labelledby="payload-before" className="flex flex-col gap-2">
         <h4 id="payload-before" className="font-medium">
-          Before sending — preview
+          Before sending — explanation preview
         </h4>
         {preview.state === "unavailable" && <p className="text-zinc-600 dark:text-zinc-400">{preview.reason}</p>}
         {preview.state === "empty" && <p className="text-zinc-600 dark:text-zinc-400">{preview.message}</p>}
@@ -107,9 +136,10 @@ export function PayloadInspector({ preview, sent, rows }: PayloadInspectorProps)
           <>
             <Meta
               items={[
+                ["Step", sent.step === "extract" ? "Read report (masked text)" : "Explain"],
                 ["Model", sent.model],
-                ["Rows", String(sent.rows)],
-                ["Language", LANGUAGE_LABEL[sent.language]],
+                [sent.step === "extract" ? "Lines" : "Rows", String(sent.rows)],
+                ["Language", sent.language ? LANGUAGE_LABEL[sent.language] : "–"],
                 ["Size", fmtBytes(sent.bytes)],
               ]}
             />
@@ -120,8 +150,9 @@ export function PayloadInspector({ preview, sent, rows }: PayloadInspectorProps)
             )}
             <PayloadText text={sent.text} label="Cloud payload as sent" testId="payload-sent" />
             <p className="text-xs text-zinc-600 dark:text-zinc-400">
-              Sent through Firebase AI Logic with App Check, together with the JSON response schema. No image, OCR text or
-              identity data is included.
+              {sent.step === "extract"
+                ? "Sent through Firebase AI Logic with App Check, together with the JSON response schema. Only the masked OCR text of the results table — no image, no report header or footer, identity data replaced by placeholders."
+                : "Sent through Firebase AI Logic with App Check, together with the JSON response schema. No image, OCR text or identity data is included."}
             </p>
           </>
         )}

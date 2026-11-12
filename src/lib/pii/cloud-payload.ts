@@ -63,7 +63,7 @@ const vocabOnly = (s: string) => {
   return w !== "" && w.split(" ").every((x) => ALLOWLIST_WORDS.has(x));
 };
 
-const docOnly = (known: KnownPii): KnownPii => ({
+export const docOnly = (known: KnownPii): KnownPii => ({
   phrases: known.phrases.filter((p) => !vocabOnly(p)),
   tokens: known.tokens.filter((t) => !vocabOnly(t)),
 });
