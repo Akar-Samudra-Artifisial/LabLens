@@ -324,6 +324,12 @@ export default function Home() {
         signal: ctrl.signal,
         known: ocrDoc.known,
         piiDetectedLocal: piiLocal,
+        onRetry: () => {
+          // Respons sebelumnya terputus di server: baris parsialnya tidak valid, request berikutnya mulai dari nol.
+          streamed = 0;
+          setRows([]);
+          setMetrics((m) => ({ ocrMs: m.ocrMs }));
+        },
         onRow: (row) => {
           // Banner "sent" baru tampil setelah cloud benar-benar membalas (baris pertama), bukan sebelum request.
           if (streamed === 0) setExtractedInCloud(true);
@@ -410,7 +416,10 @@ export default function Home() {
             ? { tone: BADGE_TONE.warn, text: "Cloud disabled — review manually" }
             : extractedInCloud
               ? { tone: BADGE_TONE.ok, text: "Guard passed — masked table text (no image) sent for cloud extraction" }
-              : { tone: BADGE_TONE.neutral, text: "Nothing sent to the cloud yet" };
+              : busyMode === "cloud" && !busy && error && fallback?.state === "ready"
+                ? // Request cloud sudah keluar (dicatat di routing) walau tidak ada baris yang kembali. Guard menolak → fallback "locked".
+                  { tone: BADGE_TONE.warn, text: "Guard passed — masked table text (no image) sent; cloud extraction failed" }
+                : { tone: BADGE_TONE.neutral, text: "Nothing sent to the cloud yet" };
 
   const explainDisabled = !result || cloudLocked || busy || explain.status === "running";
   // Alasan terlihat untuk tombol disabled (bukan hanya title); "running" sudah punya status sendiri.
@@ -512,7 +521,7 @@ export default function Home() {
 
             <RedactedCard ocr={ocr} reading={busy && busyMode !== "cloud"} badge={badge} />
 
-            <ResultsCard rows={rows} metrics={metrics} partial={partial} where={steps[2].where} busy={busy} extracting={extracting} />
+            <ResultsCard rows={rows} metrics={metrics} partial={partial} where={steps[2].where} failed={steps[2].status === "error"} busy={busy} extracting={extracting} />
 
             <ExplainCard
               explain={explain}

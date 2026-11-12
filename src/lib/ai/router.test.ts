@@ -12,7 +12,7 @@ vi.mock("./models", () => ({
 vi.mock("./prompt-api", () => ({ fileToInlineData: vi.fn() }));
 
 import { buildCloudPayload, FALLBACK_EXTRACT_PROMPT, type FallbackPayload, PiiLeakError } from "../pii";
-import { explainInCloud, extractInCloud, recordExplainBlocked, recordExtractBlocked, type RoutingEvent, subscribeRouting } from "./router";
+import { cloudErrorSummary, explainInCloud, extractInCloud, isTransientCloudError, recordExplainBlocked, recordExtractBlocked, type RoutingEvent, subscribeRouting } from "./router";
 import type { LabTestResult } from "./schemas";
 
 const okResponse = {
@@ -148,6 +148,101 @@ describe("extractInCloud (fallback teks termasking)", () => {
     });
     await expect(extractInCloud(fallbackOf("Hemoglobin | 10.2 | g/dL | 12.0 - 16.0"))).rejects.toThrow("network reset");
     expect(last()).toMatchObject({ step: "extract", status: "error", error: "network reset" });
+  });
+
+  const sdkError = (code: string, message: string) => Object.assign(new Error(`AI: ${message} (AI/${code})`), { code });
+  const brokenStream = (err: Error) => {
+    const response = Promise.reject(err);
+    response.catch(() => {});
+    return {
+      stream: (async function* () {
+        yield { text: () => '{"results":[{"testName":"Hemoglobin","value":"10.2","unit":"g/dL","referenceRange":"12.0 - 16.0"},', inferenceSource: undefined };
+        throw err;
+      })(),
+      response,
+    };
+  };
+  const okStream = () =>
+    streamOf(['{"results":[{"testName":"Hemoglobin","value":"10.2","unit":"g/dL","referenceRange":"12.0 - 16.0"}]}']);
+
+  it("stream diputus server (AI/parse-failed) → retry dengan payload sama, tiap request 1 event, baris parsial di-reset", async () => {
+    vi.useFakeTimers();
+    try {
+      const fb = fallbackOf("Hemoglobin | 10.2 | g/dL | 12.0 - 16.0");
+      generateContentStream.mockResolvedValueOnce(brokenStream(sdkError("parse-failed", "Failed to parse stream"))).mockResolvedValueOnce(okStream());
+      const onRetry = vi.fn();
+      const before = latest.length;
+      const p = extractInCloud(fb, { onRetry });
+      await vi.runAllTimersAsync();
+      const res = await p;
+      expect(res.results).toHaveLength(1);
+      expect(generateContentStream).toHaveBeenCalledTimes(2);
+      expect(generateContentStream.mock.calls.map((c) => c[0])).toEqual([fb.text, fb.text]);
+      expect(onRetry).toHaveBeenCalledWith(2);
+      const evs = latest.slice(before);
+      expect(evs.map((e) => e.status)).toEqual(["error", "ok"]);
+      expect(evs.every((e) => e.bytesSent === fb.bytes && e.piiSent === 0)).toBe(true);
+      expect(evs[0].error).toMatch(/retrying \(attempt 1\/4\)/);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("galat sementara terus-menerus → berhenti setelah 4 request, error diteruskan", async () => {
+    vi.useFakeTimers();
+    try {
+      generateContentStream.mockImplementation(async () => brokenStream(sdkError("fetch-error", "Error fetching from x: [503 ] busy")));
+      const before = latest.length;
+      const p = extractInCloud(fallbackOf("Hemoglobin | 10.2 | g/dL | 12.0 - 16.0"));
+      const assertion = expect(p).rejects.toThrow(/busy and cut off its response 4 times \(AI\/fetch-error \(HTTP 503 service unavailable\)\)/);
+      await vi.runAllTimersAsync();
+      await assertion;
+      expect(generateContentStream).toHaveBeenCalledTimes(4);
+      expect(latest.slice(before).map((e) => e.status)).toEqual(["error", "error", "error", "error"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("Batal saat jeda retry → event abort tercatat (0 byte), timer jeda dibersihkan, tidak ada request baru", async () => {
+    vi.useFakeTimers();
+    try {
+      generateContentStream.mockResolvedValueOnce(brokenStream(sdkError("parse-failed", "Failed to parse stream")));
+      const ctrl = new AbortController();
+      const before = latest.length;
+      const p = extractInCloud(fallbackOf("Hemoglobin | 10.2 | g/dL | 12.0 - 16.0"), { signal: ctrl.signal, onRetry: () => queueMicrotask(() => ctrl.abort()) });
+      const assertion = expect(p).rejects.toMatchObject({ name: "AbortError" });
+      await vi.advanceTimersByTimeAsync(0);
+      await assertion;
+      expect(generateContentStream).toHaveBeenCalledTimes(1);
+      const evs = latest.slice(before);
+      expect(evs.map((e) => e.status)).toEqual(["error", "error"]);
+      expect(evs[1]).toMatchObject({ bytesSent: 0, piiSent: 0, error: "Cancelled by the user (before retry 2/4)" });
+      expect(vi.getTimerCount()).toBe(0); // jeda retry + timeout total sudah dibersihkan
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("galat SDK diringkas ke kode + status HTTP (tanpa URL/body server) di event & error", async () => {
+    const raw = sdkError("fetch-error", 'Error fetching from https://x.example/v1/models:streamGenerateContent?key=SECRET: [403 ] {"error":{"message":"App Check token invalid","details":"…"}}');
+    generateContentStream.mockRejectedValueOnce(raw);
+    await expect(extractInCloud(fallbackOf("Hemoglobin | 10.2 | g/dL | 12.0 - 16.0"))).rejects.toThrow(/^AI\/fetch-error \(HTTP 403 forbidden\)$/);
+    expect(last().error).toBe("AI/fetch-error (HTTP 403 forbidden)");
+    expect(cloudErrorSummary(sdkError("parse-failed", "Failed to parse stream"))).toBe("AI/parse-failed (response stream interrupted by the server)");
+    expect(cloudErrorSummary(new Error("x".repeat(500))).length).toBeLessThanOrEqual(160);
+
+    generateContent.mockRejectedValueOnce(raw);
+    await expect(explainInCloud(buildCloudPayload(rows, undefined, "en"))).rejects.toThrow(/^AI\/fetch-error \(HTTP 403 forbidden\)$/);
+    expect(last()).toMatchObject({ step: "explain", status: "error", error: "AI/fetch-error (HTTP 403 forbidden)" });
+  });
+
+  it("isTransientCloudError: hanya parse-failed & fetch-error 429/5xx", () => {
+    expect(isTransientCloudError(sdkError("parse-failed", "Failed to parse stream"))).toBe(true);
+    expect(isTransientCloudError(sdkError("fetch-error", "Error fetching from x: [500 ] y"))).toBe(true);
+    expect(isTransientCloudError(sdkError("fetch-error", "Error fetching from x: [403 ] App Check"))).toBe(false);
+    expect(isTransientCloudError(new Error("network reset"))).toBe(false);
+    expect(isTransientCloudError(new DOMException("x", "AbortError"))).toBe(false);
   });
 
   it.each([

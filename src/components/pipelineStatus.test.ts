@@ -66,6 +66,21 @@ describe("pipelineSteps (status pipeline per fase)", () => {
     expect(steps[1].status).toBe("done");
   });
 
+  it("ekstraksi cloud gagal → Extract error di lokasi cloud (bukan Nano / Needs you)", () => {
+    const steps = pipelineSteps({ ...base, hasFile: true, ocr: ocrOk, busyMode: "cloud", fallback: "ready", error: true });
+    expect(steps[2]).toMatchObject({ status: "error", where: "cloud", detail: "Private cloud failed — retry" });
+    // Baris parsial sempat diterima (extractedInCloud) lalu gagal → tetap cloud + error.
+    expect(pipelineSteps({ ...base, hasFile: true, ocr: ocrOk, busyMode: "cloud", fallback: "ready", error: true, extractedInCloud: true })[2]).toMatchObject({
+      status: "error",
+      where: "cloud",
+    });
+  });
+
+  it("cloud sukses → done di cloud; Nano gagal (belum ke cloud) → tetap device + fallback attention", () => {
+    expect(pipelineSteps({ ...base, hasFile: true, ocr: ocrOk, busyMode: "cloud", hasResult: true, extractedInCloud: true })[2]).toMatchObject({ status: "done", where: "cloud" });
+    expect(pipelineSteps({ ...base, hasFile: true, ocr: ocrOk, busyMode: "device", fallback: "ready", error: true })[2]).toMatchObject({ status: "attention", where: "device" });
+  });
+
   it("hasil ada → Explain ready, atau blocked bila cloud terkunci", () => {
     expect(statuses({ hasFile: true, ocr: ocrOk, hasResult: true, cloudLocked: false })).toEqual(["done", "done", "done", "ready"]);
     expect(statuses({ hasFile: true, ocr: { reviewRequired: true }, hasResult: true, cloudLocked: true })[3]).toBe("blocked");

@@ -18,10 +18,12 @@ interface ResultsCardProps {
   busy: boolean;
   /** Ekstraksi (Nano/cloud) sedang menghasilkan baris. */
   extracting: boolean;
+  /** Langkah Extract berstatus error (gagal/dibatalkan) — label lokasi tidak boleh mengklaim "Extracted". */
+  failed?: boolean;
 }
 
 /** Tabel hasil + flag lokal, ringkasan waktu, banner critical, disclaimer. */
-export function ResultsCard({ rows, metrics, partial, where, busy, extracting }: ResultsCardProps) {
+export function ResultsCard({ rows, metrics, partial, where, busy, extracting, failed = false }: ResultsCardProps) {
   const stats = [
     ["Rows", metrics.rows !== undefined ? String(metrics.rows) : rows.length > 0 ? String(rows.length) : "–"],
     ["OCR + mask", fmtS(metrics.ocrMs)],
@@ -35,7 +37,18 @@ export function ResultsCard({ rows, metrics, partial, where, busy, extracting }:
           <h2 id="results-heading" className={H2}>
             Results {busy && rows.length > 0 && <span className={`text-sm font-normal ${MUTED}`}>(streaming…)</span>}
           </h2>
-          <LocationTag where={where} label={where === "cloud" ? "Extracted in private cloud" : "Extracted on this device"} />
+          <LocationTag
+            where={where}
+            label={
+              where === "cloud"
+                ? failed
+                  ? "Private cloud extraction failed"
+                  : "Extracted in private cloud"
+                : failed
+                  ? "On-device extraction stopped"
+                  : "Extracted on this device"
+            }
+          />
         </div>
         <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4" data-testid="metrics" data-metrics={JSON.stringify(metrics)}>
           {stats.map(([k, v]) => (

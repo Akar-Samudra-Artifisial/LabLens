@@ -231,6 +231,91 @@ export interface CloudExtractOptions {
   /** Nilai PII dokumen (lokal) — guard dijalankan ulang atas teks final tepat sebelum request. */
   known?: KnownPii;
   piiDetectedLocal?: number;
+  /** Percobaan sebelumnya terputus (galat sementara server) — buang baris parsial; `attempt` = nomor request berikutnya. */
+  onRetry?: (attempt: number) => void;
+}
+
+/**
+ * Total request maksimum untuk satu ekstraksi cloud (1 + 3 retry, jeda 1/2/3 s), semuanya di dalam
+ * CLOUD_EXTRACT_TIMEOUT_MS. Uji dev: putus beruntun sampai 3× terjadi saat model sedang padat.
+ */
+export const CLOUD_EXTRACT_MAX_ATTEMPTS = 4;
+const CLOUD_EXTRACT_RETRY_DELAY_MS = 1_000;
+
+/**
+ * Galat sementara yang aman diulang. Saat model kelebihan beban, backend sering sudah membalas HTTP 200 (SSE) lalu
+ * menutup stream dengan JSON `{"error":{"code":500,...}}` mentah (bukan event `data:`); SDK lalu melempar
+ * AI/parse-failed "Failed to parse stream". HTTP 429/5xx sebelum stream dimulai → AI/fetch-error.
+ */
+export function isTransientCloudError(e: unknown): boolean {
+  const code = sdkErrorCode(e);
+  if (code === "parse-failed") return true;
+  if (code === "fetch-error") return [429, 500, 502, 503, 504].includes(sdkHttpStatus(e) ?? 0);
+  return false;
+}
+
+/** Kode AIError SDK ("parse-failed", "fetch-error", …) tanpa prefiks; undefined untuk galat non-SDK. */
+function sdkErrorCode(e: unknown): string | undefined {
+  if (typeof e !== "object" || e === null) return undefined;
+  const code = (e as { code?: unknown }).code;
+  if (typeof code !== "string" || !/^AI: /.test(errMsg(e))) return undefined;
+  return code.replace(/^AI\//, "");
+}
+
+function sdkHttpStatus(e: unknown): number | undefined {
+  const status = (e as { customErrorData?: { status?: unknown } }).customErrorData?.status;
+  if (typeof status === "number") return status;
+  const m = errMsg(e).match(/\[(\d{3})\b/);
+  return m ? Number(m[1]) : undefined;
+}
+
+const HTTP_TEXT: Readonly<Record<number, string>> = {
+  400: "bad request",
+  403: "forbidden",
+  404: "not found",
+  429: "rate limited",
+  500: "server error",
+  502: "bad gateway",
+  503: "service unavailable",
+  504: "gateway timeout",
+};
+const MAX_ERROR_CHARS = 160;
+
+/**
+ * Ringkasan galat untuk event routing & UI: galat SDK → kode + status HTTP saja (tanpa URL/body server mentah);
+ * galat lain dipotong ke MAX_ERROR_CHARS.
+ */
+export function cloudErrorSummary(e: unknown): string {
+  const code = sdkErrorCode(e);
+  if (code === "parse-failed") return "AI/parse-failed (response stream interrupted by the server)";
+  if (code) {
+    const status = sdkHttpStatus(e);
+    return status ? `AI/${code} (HTTP ${status}${HTTP_TEXT[status] ? ` ${HTTP_TEXT[status]}` : ""})` : `AI/${code}`;
+  }
+  const m = errMsg(e);
+  return m.length > MAX_ERROR_CHARS ? `${m.slice(0, MAX_ERROR_CHARS - 1)}…` : m;
+}
+
+/** Galat SDK dibungkus ulang dengan pesan ringkas (asli di `cause`); galat lain diteruskan apa adanya. */
+function presentable(e: unknown): Error {
+  if (sdkErrorCode(e)) return new Error(cloudErrorSummary(e), { cause: e });
+  return e instanceof Error ? e : new Error(String(e));
+}
+
+/** Jeda yang berhenti (melempar signal.reason) begitu signal aborted; timer dibersihkan. */
+function delay(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) return reject(signal.reason);
+    const onAbort = () => {
+      clearTimeout(id);
+      reject(signal.reason);
+    };
+    const id = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 /** Fallback dikunci / guard menolak saat menyusun teks (sebelum ada payload) — tidak ada request. Tanpa isi dokumen. */
@@ -290,7 +375,6 @@ export async function extractInCloud(fallback: FallbackPayload, opts: CloudExtra
   );
   const onExternalAbort = () => ctrl.abort(new DOMException("Cancelled by the user", "AbortError"));
   opts.signal?.addEventListener("abort", onExternalAbort, { once: true });
-  const stages: ExtractStages = {};
   let location: InferenceSource = InferenceSource.IN_CLOUD;
   // Placeholder "Test N" → nama asli dokumen, dipetakan di perangkat (nama asli tidak pernah dikirim).
   const localName = (name: unknown) => {
@@ -298,32 +382,57 @@ export async function extractInCloud(fallback: FallbackPayload, opts: CloudExtra
     return Object.hasOwn(fallback.localNames, s) ? fallback.localNames[s] : s;
   };
   try {
-    const result = await raceAbort(getCloudExtractionModel().generateContentStream(fallback.text, { signal: ctrl.signal }), ctrl.signal);
-    result.response.catch(() => {});
-    const rows = createResultsStreamParser<Omit<LabTestResult, "flag">>();
-    let rowCount = 0;
-    let text = "";
-    for await (const chunk of iterateUntilAborted(result.stream, ctrl.signal)) {
-      stages.prefillMs ??= elapsed(start);
-      if (chunk.inferenceSource) location = chunk.inferenceSource;
-      const value = chunk.text();
-      text += value;
-      for (const r of rows.push(value)) {
-        stages.firstRowMs ??= elapsed(start);
-        opts.onRow?.({ ...r, testName: localName(r.testName), flag: flagFromRange(String(r.value ?? ""), String(r.referenceRange ?? "")) }, rowCount++);
-      }
-      if (text.length > EXTRACT_MAX_CHARS * 2) {
-        ctrl.abort(new DOMException("Model output too long (degenerate)", "QuotaExceededError"));
+    // Tiap percobaan = satu request = satu event routing (byte dihitung per request). Payload & guard di atas identik.
+    for (let attempt = 1; ; attempt++) {
+      const attemptStart = performance.now();
+      const stages: ExtractStages = {};
+      try {
+        const result = await raceAbort(getCloudExtractionModel().generateContentStream(fallback.text, { signal: ctrl.signal }), ctrl.signal);
+        result.response.catch(() => {});
+        const rows = createResultsStreamParser<Omit<LabTestResult, "flag">>();
+        let rowCount = 0;
+        let text = "";
+        for await (const chunk of iterateUntilAborted(result.stream, ctrl.signal)) {
+          stages.prefillMs ??= elapsed(attemptStart);
+          if (chunk.inferenceSource) location = chunk.inferenceSource;
+          const value = chunk.text();
+          text += value;
+          for (const r of rows.push(value)) {
+            stages.firstRowMs ??= elapsed(attemptStart);
+            opts.onRow?.({ ...r, testName: localName(r.testName), flag: flagFromRange(String(r.value ?? ""), String(r.referenceRange ?? "")) }, rowCount++);
+          }
+          if (text.length > EXTRACT_MAX_CHARS * 2) {
+            ctrl.abort(new DOMException("Model output too long (degenerate)", "QuotaExceededError"));
+          }
+        }
+        const results = parseCloudResults(text).map((r) => ({ ...r, testName: localName(r.testName) }));
+        const parsed = fromLeanExtraction({ results, piiKinds: [] });
+        record({ ...base, ...sentFields, location, latencyMs: elapsed(attemptStart), ok: true, status: "ok", stages });
+        return parsed;
+      } catch (e) {
+        const err = ctrl.signal.aborted ? ctrl.signal.reason : e;
+        const retry = !ctrl.signal.aborted && attempt < CLOUD_EXTRACT_MAX_ATTEMPTS && isTransientCloudError(err);
+        const summary = cloudErrorSummary(err);
+        const message = `${summary}${retry ? ` — retrying (attempt ${attempt}/${CLOUD_EXTRACT_MAX_ATTEMPTS})` : attempt > 1 ? ` (attempt ${attempt}/${CLOUD_EXTRACT_MAX_ATTEMPTS})` : ""}`;
+        record({ ...base, ...sentFields, location, latencyMs: elapsed(attemptStart), ok: false, status: "error", error: message, stages });
+        if (!retry) {
+          if (attempt > 1 && !ctrl.signal.aborted && isTransientCloudError(err)) {
+            throw new Error(`The cloud model is busy and cut off its response ${attempt} times (${summary}). Please try again in a moment.`, { cause: err });
+          }
+          throw presentable(err);
+        }
+        // Baris parsial percobaan gagal dibuang oleh pemanggil sebelum request berikutnya.
+        opts.onRetry?.(attempt + 1);
+        const pauseStart = performance.now();
+        try {
+          await delay(CLOUD_EXTRACT_RETRY_DELAY_MS * attempt, ctrl.signal);
+        } catch (abortReason) {
+          // Batal/timeout saat jeda: tidak ada request baru (0 byte), tapi timeline harus berakhir dengan alasannya.
+          record({ ...base, location, latencyMs: elapsed(pauseStart), ok: false, status: "error", error: `${cloudErrorSummary(abortReason)} (before retry ${attempt + 1}/${CLOUD_EXTRACT_MAX_ATTEMPTS})`, bytesSent: 0, piiSent: 0 });
+          throw presentable(abortReason);
+        }
       }
     }
-    const results = parseCloudResults(text).map((r) => ({ ...r, testName: localName(r.testName) }));
-    const parsed = fromLeanExtraction({ results, piiKinds: [] });
-    record({ ...base, ...sentFields, location, latencyMs: elapsed(start), ok: true, status: "ok", stages });
-    return parsed;
-  } catch (e) {
-    const err = ctrl.signal.aborted ? ctrl.signal.reason : e;
-    record({ ...base, ...sentFields, location, latencyMs: elapsed(start), ok: false, status: "error", error: errMsg(err), stages });
-    throw err instanceof Error ? err : new Error(String(err));
   } finally {
     clearTimeout(timer);
     opts.signal?.removeEventListener("abort", onExternalAbort);
@@ -403,8 +512,8 @@ export async function explainInCloud(payload: CloudPayload, known?: KnownPii, op
   try {
     ({ response } = await getCloudExplainModel().generateContent(payload.text));
   } catch (e) {
-    record({ ...base, ...sentFields, latencyMs: elapsed(start), ok: false, status: "error", error: errMsg(e) });
-    throw e;
+    record({ ...base, ...sentFields, latencyMs: elapsed(start), ok: false, status: "error", error: cloudErrorSummary(e) });
+    throw presentable(e);
   }
   const location = response.inferenceSource ?? InferenceSource.IN_CLOUD;
   try {

@@ -55,13 +55,19 @@ export function pipelineSteps(s: PipelineInput): StepItem[] {
   const waitsForOcr = ocrPending && s.ocrContext;
   const parallel = ocrPending && !s.ocrContext;
 
+  // busyMode tetap "cloud" setelah percobaan cloud selesai (direset hanya oleh ekstraksi baru) → jalur sebenarnya.
+  const cloudTried = s.busyMode === "cloud";
+  const cloudFailed = cloudTried && !s.busy && !s.hasResult && s.error;
+
   const extract: StepStatus = s.hasResult
     ? "done"
     : waitsForOcr
       ? "todo"
       : s.busy && s.busyMode !== "ocr"
         ? "active"
-        : s.fallback === "ready"
+        : cloudFailed
+          ? "error"
+          : s.fallback === "ready"
           ? "attention"
           : s.fallback === "locked"
             ? "blocked"
@@ -88,7 +94,7 @@ export function pipelineSteps(s: PipelineInput): StepItem[] {
                   ? "ready"
                   : "todo";
 
-  const extractWhere: InferenceLocation = (s.busy && s.busyMode === "cloud") || s.extractedInCloud ? "cloud" : "device";
+  const extractWhere: InferenceLocation = cloudTried || s.extractedInCloud ? "cloud" : "device";
   return [
     { key: "upload", title: "Upload", where: "device", detail: s.hasFile ? (s.sample ? "Sample loaded" : "Image selected") : "Photo or sample", status: upload },
     { key: "read", title: "Read & mask", where: "device", detail: "Local OCR + PII masking", status: read },
@@ -98,7 +104,9 @@ export function pipelineSteps(s: PipelineInput): StepItem[] {
       where: extractWhere,
       detail:
         extractWhere === "cloud"
-          ? "Private cloud, masked text"
+          ? cloudFailed
+            ? "Private cloud failed — retry"
+            : "Private cloud, masked text"
           : parallel
             ? "Gemini Nano, in parallel with OCR"
             : waitsForOcr

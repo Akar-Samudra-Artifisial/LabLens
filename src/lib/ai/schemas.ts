@@ -1,4 +1,5 @@
 import { Schema } from "firebase/ai";
+import { readLabRow } from "./lab-number";
 
 export const LAB_FLAGS = ["low", "normal", "high", "critical", "unknown"] as const;
 export type LabFlag = (typeof LAB_FLAGS)[number];
@@ -146,43 +147,25 @@ export const PII_PLACEHOLDERS: Record<PiiKind, string> = {
   other: "[LAINNYA]",
 };
 
-// "13.800" / "13,800" → 13800 ; "10.2" / "10,2" → 10.2 (format angka lab Indonesia)
-function parseLabNumber(s: string): number | null {
-  const t = s.trim().replace(/\s/g, "");
-  if (!t) return null;
-  if (/^\d{1,3}([.,]\d{3})+$/.test(t)) return Number(t.replace(/[.,]/g, ""));
-  const n = Number(t.replace(",", "."));
-  return Number.isFinite(n) ? n : null;
-}
-
-/** Flag deterministik dari nilai vs rentang rujukan ("a - b", "<x", ">x", "≤x", "≥x"); selain itu "unknown". */
+/**
+ * Flag deterministik dari nilai vs rentang rujukan ("a - b", "<x", ">x", "≤x", "≥x"); selain itu "unknown".
+ * Angka dibaca readLabRow ("13.800" vs 4.000–10.000 → ribuan; "0.350" / "4.500" vs 3.5–5.5 → desimal).
+ */
 export function flagFromRange(value: string, range: string): LabFlag {
-  const v = parseLabNumber(value.replace(/[<>≤≥]/g, ""));
-  if (v === null) return "unknown";
-  const r = range.trim();
-  const between = r.match(/^(\d[\d.,]*)\s*[-–]\s*(\d[\d.,]*)$/);
-  if (between) {
-    const lo = parseLabNumber(between[1]);
-    const hi = parseLabNumber(between[2]);
-    if (lo === null || hi === null) return "unknown";
-    return v < lo ? "low" : v > hi ? "high" : "normal";
+  const row = readLabRow(value, range);
+  if (!row) return "unknown";
+  const { value: v, range: r } = row;
+  if (r.kind === "between") return v < r.lo ? "low" : v > r.hi ? "high" : "normal";
+  switch (r.op) {
+    case "<":
+      return v < r.lim ? "normal" : "high";
+    case "≤":
+      return v <= r.lim ? "normal" : "high";
+    case ">":
+      return v > r.lim ? "normal" : "low";
+    default:
+      return v >= r.lim ? "normal" : "low";
   }
-  const bound = r.match(/^([<>≤≥])\s*=?\s*(\d[\d.,]*)$/);
-  if (bound) {
-    const lim = parseLabNumber(bound[2]);
-    if (lim === null) return "unknown";
-    switch (bound[1]) {
-      case "<":
-        return v < lim ? "normal" : "high";
-      case "≤":
-        return v <= lim ? "normal" : "high";
-      case ">":
-        return v > lim ? "normal" : "low";
-      default:
-        return v >= lim ? "normal" : "low";
-    }
-  }
-  return "unknown";
 }
 
 /**

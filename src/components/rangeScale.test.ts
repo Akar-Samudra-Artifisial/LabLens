@@ -1,30 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { flagFromRange } from "../lib/ai/schemas";
-import { parseLabNumber, rangeGeometry, rangeSummary } from "./rangeScale";
-
-describe("parseLabNumber (salinan aturan src/lib/ai/schemas.ts)", () => {
-  it("pola ribuan Indonesia diikuti persis seperti flagFromRange", () => {
-    expect(parseLabNumber("13.800")).toBe(13800);
-    expect(parseLabNumber("4.500")).toBe(4500);
-    // Aturan lib juga membaca ini sebagai ribuan; diikuti agar posisi tidak bertentangan dengan flag.
-    expect(parseLabNumber("0.350")).toBe(350);
-    expect(parseLabNumber("10,2")).toBe(10.2);
-    expect(parseLabNumber("0.35")).toBe(0.35);
-    expect(parseLabNumber("-")).toBeNull();
-    expect(parseLabNumber("positive")).toBeNull();
-    expect(parseLabNumber("")).toBeNull();
-  });
-
-  it("perilaku setara dengan parser lib (dibuktikan lewat flagFromRange di kedua sisi ambang)", () => {
-    for (const s of ["13.800", "4.500", "0.350", "10,2", "0.35", "1.5", "200"]) {
-      const n = parseLabNumber(s)!;
-      expect(flagFromRange(s, `${n} - ${n * 2}`.replace(/\./g, ","))).not.toBe("unknown");
-      // Nilai sama persis dengan batas bawah/atas → normal; jika parser berbeda, flag akan low/high.
-      expect(flagFromRange(String(n), `0 - ${s}`)).toBe("normal");
-      expect(flagFromRange(String(n + 1), `0 - ${s}`)).toBe("high");
-    }
-  });
-});
+import { rangeGeometry, rangeSummary } from "./rangeScale";
 
 describe("rangeGeometry (range bar, presentasi saja)", () => {
   it("nilai di bawah rentang → kiri zona normal", () => {
@@ -41,9 +17,19 @@ describe("rangeGeometry (range bar, presentasi saja)", () => {
     expect(g.deviation).toBeCloseTo(0.38, 2);
   });
 
-  it("0.350 dan 4.500 mengikuti flag lokal", () => {
+  it("0.350 dan 4.500 mengikuti flag lokal (interpretasi angka yang sama)", () => {
     expect(rangeGeometry("0.350", "0.200 - 0.500")!.direction).toBe("within");
+    expect(rangeGeometry("0.350", "0.2 - 0.6")!.direction).toBe("within");
+    expect(rangeGeometry("4.500", "3.5 - 5.5")!.direction).toBe("within");
     expect(rangeGeometry("4.500", "4.000 - 10.000")!.direction).toBe("within");
+  });
+
+  it("lintas-konvensi & rentang negatif", () => {
+    expect(rangeGeometry("1.000", "150.000-400.000")!.direction).toBe("below");
+    const g = rangeGeometry("-1.5", "-2.0 – 2.0")!;
+    expect(g.direction).toBe("within");
+    expect(g.normal).toEqual([25, 75]);
+    expect(g.value).toBeCloseTo(31.25, 2);
   });
 
   it("nilai ekstrem dijepit ke tepi + ditandai clipped", () => {
@@ -65,8 +51,8 @@ describe("rangeGeometry (range bar, presentasi saja)", () => {
   });
 
   it("penanda tidak pernah bertentangan dengan flag lokal", () => {
-    const values = ["0", "0.35", "0.350", "2", "4.500", "10,2", "13.800", "28", "40", "150", "250", "452.000"];
-    const ranges = ["12.0 - 16.0", "4.000 - 10.000", "0.200 - 0.500", "0 - 20", "1 - 3", "<200", "≤ 200", "> 40", "≥ 40", "150.000 - 400.000"];
+    const values = ["0", "0.35", "0.350", "2", "4.500", "10,2", "13.800", "28", "40", "150", "250", "452.000", "1,5", "1.000", "-1.5", "-6", "1.234,5"];
+    const ranges = ["12.0 - 16.0", "4.000 - 10.000", "0.200 - 0.500", "0.2 - 0.6", "3.5 - 5.5", "3.500-5.500", "0 - 20", "1 - 3", "<200", "≤ 200", "> 40", "≥ 40", "150.000 - 400.000", "-5 - 5", "-2.0 – 2.0"];
     for (const v of values)
       for (const r of ranges) {
         const g = rangeGeometry(v, r);
