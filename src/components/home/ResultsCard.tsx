@@ -4,7 +4,8 @@ import { AlertIcon } from "../icons";
 import { type InferenceLocation, LocationTag } from "../LocationTag";
 import { MedicalDisclaimer } from "../MedicalDisclaimer";
 import { ResultsTable } from "../ResultsTable";
-import { CALLOUT, CARD, CARD_BODY, H2, MUTED } from "../ui";
+import { HealthSnapshot } from "../HealthSnapshot";
+import { CALLOUT, CARD, CARD_BODY, DISPLAY_NUM, EYEBROW, H2, MUTED } from "../ui";
 import type { Metrics } from "./types";
 
 const fmtS = (ms?: number) => (ms === undefined ? "–" : `${(ms / 1000).toFixed(1)} s`);
@@ -38,12 +39,13 @@ export function ResultsCard({ rows, metrics, partial, where, busy, extracting }:
         </div>
         <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4" data-testid="metrics" data-metrics={JSON.stringify(metrics)}>
           {stats.map(([k, v]) => (
-            <div key={k} className="rounded-control border border-line bg-surface-2 px-3 py-2">
-              <dt className={`text-xs ${MUTED}`}>{k}</dt>
-              <dd className="font-mono text-base font-semibold tabular-nums">{v}</dd>
+            <div key={k} className="rounded-control border border-line bg-surface-2 px-3 py-2.5">
+              <dt className={EYEBROW}>{k}</dt>
+              <dd className={`${DISPLAY_NUM} mt-1 text-xl`}>{v}</dd>
             </div>
           ))}
         </dl>
+        {rows.length > 0 && !extracting && !partial && <HealthSnapshot rows={rows} />}
         {/* Dari flag lokal — tampil apa pun status cloud (terkunci/offline/gagal); ExplanationView tidak mengulangnya. */}
         <CriticalBanner rows={rows} />
         {partial && (

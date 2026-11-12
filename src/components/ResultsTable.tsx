@@ -1,8 +1,9 @@
 import type { LabTestResult } from "@/lib/ai/schemas";
 import { FlagBadge } from "./FlagBadge";
+import { RangeBar, RangeScaleNote } from "./RangeBar";
 
 const SKELETON_ROWS = 5;
-const SKELETON_WIDTHS = ["w-4/5", "ml-auto w-1/3", "w-1/2", "w-2/3", "w-3/5"] as const;
+const SKELETON_WIDTHS = ["w-4/5", "ml-auto w-1/3", "w-1/2", "w-2/3", "w-full", "w-3/5"] as const;
 
 /** Latar baris per flag (token; flag juga selalu punya ikon + teks lewat FlagBadge). */
 const ROW_TINT: Readonly<Record<LabTestResult["flag"], string>> = {
@@ -40,12 +41,13 @@ export function ResultsTable({ rows, loading, partial }: ResultsTableProps) {
       <ul className={`flex flex-col divide-y divide-line rounded-control border border-line sm:hidden ${partial ? "italic opacity-60" : ""}`} aria-label="Extracted lab results">
         {rows.map((r, i) => (
           <li key={i} className={`flex items-start justify-between gap-3 px-3 py-2.5 motion-safe:animate-enter ${ROW_TINT[r.flag]}`}>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="font-medium leading-snug">{r.testName}</p>
               <p className="mt-0.5 text-sm">
                 <span className="font-mono font-semibold tabular-nums">{r.value}</span> <span className="text-muted">{r.unit}</span>
               </p>
               {r.referenceRange && <p className="font-mono text-xs text-muted">Ref {r.referenceRange}</p>}
+              <RangeBar value={r.value} unit={r.unit} range={r.referenceRange} flag={r.flag} className="mt-2 max-w-52" />
             </div>
             <FlagBadge flag={r.flag} />
           </li>
@@ -62,7 +64,7 @@ export function ResultsTable({ rows, loading, partial }: ResultsTableProps) {
       </ul>
 
       <div className="hidden overflow-x-auto rounded-control border border-line sm:block">
-        <table className={`w-full min-w-[34rem] text-sm ${partial ? "italic opacity-60" : ""}`} data-testid="rows">
+        <table className={`w-full min-w-[40rem] text-sm ${partial ? "italic opacity-60" : ""}`} data-testid="rows">
           <caption className="sr-only">Extracted lab results with locally computed flags</caption>
           <thead className="bg-surface-2">
             <tr className="border-b border-line">
@@ -70,6 +72,9 @@ export function ResultsTable({ rows, loading, partial }: ResultsTableProps) {
               <th scope="col" className={`${TH} text-right`}>Result</th>
               <th scope="col" className={TH}>Unit</th>
               <th scope="col" className={TH}>Reference</th>
+              <th scope="col" className={`${TH} w-40`}>
+                Position in range
+              </th>
               <th scope="col" className={TH}>Flag</th>
             </tr>
           </thead>
@@ -80,6 +85,9 @@ export function ResultsTable({ rows, loading, partial }: ResultsTableProps) {
                 <td className={`${TD} text-right font-mono tabular-nums`}>{r.value}</td>
                 <td className={`${TD} text-muted`}>{r.unit}</td>
                 <td className={`${TD} font-mono text-xs tabular-nums text-muted`}>{r.referenceRange}</td>
+                <td className={`${TD} align-middle`}>
+                  <RangeBar value={r.value} unit={r.unit} range={r.referenceRange} flag={r.flag} />
+                </td>
                 <td className={TD}>
                   <FlagBadge flag={r.flag} />
                 </td>
@@ -97,6 +105,7 @@ export function ResultsTable({ rows, loading, partial }: ResultsTableProps) {
           </tbody>
         </table>
       </div>
+      {rows.some((r) => r.flag !== "unknown") && <RangeScaleNote />}
     </>
   );
 }

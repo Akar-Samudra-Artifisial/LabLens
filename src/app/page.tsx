@@ -8,10 +8,11 @@ import { ResultsCard } from "@/components/home/ResultsCard";
 import type { BusyMode, ExplainState, Metrics, OcrView } from "@/components/home/types";
 import { UploadCard } from "@/components/home/UploadCard";
 import { DeviceIcon } from "@/components/icons";
-import type { InferenceLocation } from "@/components/LocationTag";
 import type { FallbackPreview, PayloadPreview } from "@/components/PayloadInspector";
-import { RoutingPanel, RoutingSummary } from "@/components/RoutingPanel";
-import { type StepItem, Stepper, type StepStatus } from "@/components/Stepper";
+import { redactionBoxes } from "@/components/home/redactionBoxes";
+import { Pipeline } from "@/components/Pipeline";
+import { pipelineSteps } from "@/components/pipelineStatus";
+import { RoutingPanel, RoutingSummary, routingTotals } from "@/components/RoutingPanel";
 import { CALLOUT, CARD, MUTED } from "@/components/ui";
 import { warmUpOnDeviceModel } from "@/lib/ai/models";
 import { ON_DEVICE_CREATE_OPTIONS, promptApi } from "@/lib/ai/prompt-api";
@@ -214,7 +215,14 @@ export default function Home() {
           const knownPii = knownPiiFrom(o.page, det);
           setKnown(knownPii);
           setOcrDoc({ page: o.page, det, known: knownPii });
-          setOcr({ ms: o.ms, text, imageUrl: URL.createObjectURL(blob), counts: countByKind(det), reviewRequired: det.reviewRequired });
+          setOcr({
+            ms: o.ms,
+            text,
+            imageUrl: URL.createObjectURL(blob),
+            counts: countByKind(det),
+            reviewRequired: det.reviewRequired,
+            boxes: redactionBoxes(o.page, det),
+          });
           setMetrics((m) => ({ ...m, ocrMs: since() }));
           return { det, text, doc: { page: o.page, det, known: knownPii } satisfies OcrDoc };
         } finally {
@@ -415,52 +423,33 @@ export default function Home() {
         : null;
 
   // Progres alur untuk stepper (hanya presentasi; diturunkan dari state yang sudah ada).
-  const extractWhere: InferenceLocation = busyMode === "cloud" || extractedInCloud ? "cloud" : "device";
-  const readStatus: StepStatus = ocrError
-    ? "error"
-    : ocr
-      ? ocr.reviewRequired
-        ? "attention"
-        : "done"
-      : busy && busyMode !== "cloud"
-        ? "active"
-        : "todo";
-  const extractStatus: StepStatus = result
-    ? "done"
-    : busy && busyMode !== "ocr"
-      ? "active"
-      : fallback
-        ? fallback.state === "ready"
-          ? "attention"
-          : "error"
-        : error
-          ? "error"
-          : "todo";
-  const explainStatus: StepStatus =
-    explain.status === "done" ? "done" : explain.status === "running" ? "active" : explain.status === "idle" ? "todo" : "error";
-  const steps: StepItem[] = [
-    { key: "upload", title: "Upload", where: "device", detail: file ? (sample ? "Sample loaded" : "Image selected") : "Photo or sample", status: file ? "done" : "active" },
-    { key: "read", title: "Read & mask", where: "device", detail: "Local OCR + PII masking", status: readStatus },
-    {
-      key: "extract",
-      title: "Extract",
-      where: extractWhere,
-      detail: extractWhere === "cloud" ? "Private cloud, masked text" : "Gemini Nano on-device",
-      status: extractStatus,
-    },
-    { key: "explain", title: "Explain", where: "cloud", detail: "Gemini, anonymous rows", status: explainStatus },
-  ];
+  const steps = pipelineSteps({
+    hasFile: !!file,
+    sample: !!sample,
+    sampleLoading,
+    busy,
+    busyMode,
+    ocrContext,
+    ocr,
+    ocrError: !!ocrError,
+    hasResult: !!result,
+    error: !!error,
+    fallback: fallback?.state ?? null,
+    extractedInCloud,
+    cloudLocked,
+    explain: explain.status,
+  });
+  const totals = routingTotals(events);
   const showIntro = !ocr && !busy && rows.length === 0;
   const extracting = busy && busyMode !== "ocr";
 
   return (
     <div className="flex min-h-full flex-col">
-      <AppHeader availability={availability} warm={warm} />
+      <AppHeader availability={availability} warm={warm}>
+        <Pipeline steps={steps} crossing={{ bytes: totals.bytesSent, pii: totals.piiInPayloads, blocked: totals.blocked }} />
+      </AppHeader>
 
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-        <div className={`${CARD} p-2`}>
-          <Stepper steps={steps} />
-        </div>
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
 
         {/* Mobile/tablet: panel routing lengkap ada di bawah konten, jadi angka privasi utama tampil lebih awal. */}
         <div className="lg:hidden">
@@ -523,7 +512,7 @@ export default function Home() {
 
             <RedactedCard ocr={ocr} reading={busy && busyMode !== "cloud"} badge={badge} />
 
-            <ResultsCard rows={rows} metrics={metrics} partial={partial} where={extractWhere} busy={busy} extracting={extracting} />
+            <ResultsCard rows={rows} metrics={metrics} partial={partial} where={steps[2].where} busy={busy} extracting={extracting} />
 
             <ExplainCard
               explain={explain}

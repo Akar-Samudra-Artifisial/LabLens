@@ -8,6 +8,16 @@ export interface OcrView {
   counts: Partial<Record<PiiSpanKind, number>>;
   /** Batas tabel tidak ditemukan → cloud dinonaktifkan (fail-closed). */
   reviewRequired: boolean;
+  /** Area tersensor (persen gambar) untuk animasi sorot; zone = pita kepala/kaki laporan. Presentasi saja. */
+  boxes: readonly RedactionBox[];
+}
+
+export interface RedactionBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  zone: boolean;
 }
 
 /** Waktu (ms sejak klik) — juga dibaca runner spike lewat data-metrics. */

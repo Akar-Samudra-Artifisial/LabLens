@@ -2,9 +2,9 @@ import { useId, useState } from "react";
 import type { RoutingEvent, RoutingStatus } from "@/lib/ai/router";
 import type { LabTestResult } from "@/lib/ai/schemas";
 import { EyeIcon, ShieldIcon } from "./icons";
-import { LocationDot, LocationTag } from "./LocationTag";
+import { LocationTag } from "./LocationTag";
 import { type FallbackPreview, fmtBytes, PayloadInspector, type PayloadPreview } from "./PayloadInspector";
-import { BTN_SECONDARY, CARD, H2 } from "./ui";
+import { BTN_SECONDARY, CARD, DISPLAY_NUM, H2, LIFT } from "./ui";
 
 const STATUS: Readonly<Record<RoutingStatus, { label: string; cls: string }>> = {
   ok: { label: "OK", cls: "border-ok/40 bg-ok-soft text-ok-ink" },
@@ -36,9 +36,9 @@ const TONE: Readonly<Record<Tone, string>> = {
 
 function Stat({ value, label, testId, tone = "neutral" }: { value: string; label: string; testId?: string; tone?: Tone }) {
   return (
-    <div className={`rounded-control border px-3 py-2.5 ${TONE[tone]}`}>
-      <dt className="text-xs text-muted">{label}</dt>
-      <dd className="mt-0.5 font-mono text-xl font-semibold tabular-nums" data-testid={testId}>
+    <div className={`rounded-control border px-3 py-2.5 ${LIFT} ${TONE[tone]}`}>
+      <dt className="text-xs leading-tight text-muted">{label}</dt>
+      <dd className={`${DISPLAY_NUM} mt-1 text-2xl`} data-testid={testId}>
         {value}
       </dd>
     </div>
@@ -168,43 +168,62 @@ export function RoutingPanel({ events, piiDetectedLocal, preview, rows, fallback
         {last ? `${STEP_LABEL[last.step]} ${onDevice(last) ? "on device" : "in the cloud"}: ${STATUS[last.status].label}, ${last.latencyMs} ms` : ""}
       </p>
 
-      <div>
-        <h3 className="text-sm font-semibold">Timeline</h3>
+      {/* Konsol: selalu gelap (token console-*), mono, gaya log — tetap <ol>/<li data-step> untuk runner. */}
+      <div className="overflow-hidden rounded-control border border-console-line bg-console text-console-ink shadow-card">
+        <div className="flex items-center gap-2 border-b border-console-line bg-console-2 px-3 py-2">
+          <span aria-hidden="true" className="flex gap-1">
+            <span className="size-2 rounded-full bg-console-line" />
+            <span className="size-2 rounded-full bg-console-line" />
+            <span className="size-2 rounded-full bg-console-line" />
+          </span>
+          <h3 className="font-mono text-[11px] tracking-wide text-console-muted">routing.log — timeline</h3>
+          <span className="ml-auto flex items-center gap-1.5 font-mono text-[11px] text-console-muted">
+            <span aria-hidden="true" className="size-1.5 rounded-full bg-console-ok motion-safe:animate-breathe" />
+            live
+          </span>
+        </div>
         {events.length === 0 ? (
-          <p className="mt-2 rounded-control border border-dashed border-line-strong p-3 text-sm text-muted">
-            No steps yet. Reading the report runs on this device; each step will appear here with its latency and bytes sent.
+          <p className="p-3 font-mono text-xs leading-relaxed text-console-muted">
+            <span className="text-console-device">$</span> waiting for the first step…
+            <span aria-hidden="true" className="ml-0.5 inline-block h-3.5 w-1.5 translate-y-0.5 bg-console-muted motion-safe:animate-breathe" />
+            <span className="mt-1 block">Reading the report runs on this device; each step appears here with its latency and bytes sent.</span>
           </p>
         ) : (
-          <ol className="mt-3 flex flex-col" data-testid="routing-timeline">
-            {events.map((ev, i) => {
+          <ol className="flex flex-col gap-3 p-3 font-mono text-xs" data-testid="routing-timeline">
+            {events.map((ev) => {
               const local = onDevice(ev);
               const stages = stagesText(ev);
               return (
                 <li
                   key={ev.id}
-                  className="relative flex gap-3 pb-4 last:pb-0 motion-safe:animate-enter"
+                  className={`border-l-2 pl-3 motion-safe:animate-enter ${local ? "border-console-device" : "border-console-cloud"}`}
                   data-step={ev.step}
                   data-location={ev.location}
                   data-status={ev.status}
                 >
-                  {i < events.length - 1 && <span aria-hidden="true" className="absolute top-9 bottom-1 left-[15px] w-px bg-line-strong" />}
-                  <LocationDot where={local ? "device" : "cloud"} />
-                  <div className="min-w-0 flex-1 text-sm">
-                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium">
-                      {STEP_LABEL[ev.step]}
-                      <span className={`text-xs ${local ? "text-device-ink" : "text-cloud-ink"}`}>
-                        {local ? "On-device (Gemini Nano)" : ev.location === "in_cloud" ? "Cloud (Gemini)" : "Unknown"}
-                      </span>
-                    </p>
-                    <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-                      <span className={`rounded-full border px-1.5 py-px font-medium ${STATUS[ev.status].cls}`}>{STATUS[ev.status].label}</span>
-                      <span className="font-mono tabular-nums">{ev.latencyMs.toLocaleString("en-US")} ms</span>
-                      <span>{ev.bytesSent > 0 ? `${fmtBytes(ev.bytesSent)} sent, ${ev.piiSent} PII` : "0 B left the device"}</span>
-                      <time dateTime={new Date(ev.at).toISOString()}>{new Date(ev.at).toLocaleTimeString("en-US")}</time>
-                    </p>
-                    {stages && <p className="mt-1 font-mono text-[11px] text-muted">{stages}</p>}
-                    {ev.error && <p className="mt-1 break-words text-xs text-danger-ink">{ev.error}</p>}
-                  </div>
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <time className="text-console-muted" dateTime={new Date(ev.at).toISOString()}>
+                      {new Date(ev.at).toLocaleTimeString("en-US", { hour12: false })}
+                    </time>
+                    <span className={`font-semibold ${local ? "text-console-device" : "text-console-cloud"}`}>
+                      {local ? "On-device (Gemini Nano)" : ev.location === "in_cloud" ? "Cloud (Gemini)" : "Unknown"}
+                    </span>
+                    <span className="font-sans text-[13px] font-medium">{STEP_LABEL[ev.step]}</span>
+                    <span className={`ml-auto font-semibold ${ev.status === "ok" ? "text-console-ok" : "text-console-danger"}`}>[{STATUS[ev.status].label}]</span>
+                  </p>
+                  <p className="mt-1 text-console-muted">
+                    <span aria-hidden="true">↳ </span>
+                    <span className="text-console-ink tabular-nums">{ev.latencyMs.toLocaleString("en-US")} ms</span> ·{" "}
+                    {ev.bytesSent > 0 ? (
+                      <>
+                        <span className="text-console-cloud">{fmtBytes(ev.bytesSent)} sent</span>, <span className="text-console-ok">{ev.piiSent} PII</span>
+                      </>
+                    ) : (
+                      <span className="text-console-device">0 B left the device</span>
+                    )}
+                  </p>
+                  {stages && <p className="mt-0.5 text-[11px] text-console-muted">{stages}</p>}
+                  {ev.error && <p className="mt-1 break-words text-console-danger">{ev.error}</p>}
                 </li>
               );
             })}

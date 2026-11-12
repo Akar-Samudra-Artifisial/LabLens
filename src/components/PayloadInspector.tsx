@@ -3,7 +3,7 @@ import type { LabTestResult } from "@/lib/ai/schemas";
 import type { CloudPayload, DropReason, FallbackPayload } from "@/lib/pii";
 import { CheckIcon } from "./icons";
 import { LocationTag } from "./LocationTag";
-import { PRE } from "./ui";
+import { CONSOLE_PRE } from "./ui";
 
 /** Pratinjau payload dari buildCloudPayload yang sama dengan yang dipakai tombol Explain. */
 export type PayloadPreview =
@@ -40,7 +40,7 @@ function Meta({ items }: { items: readonly [string, string][] }) {
 
 function PayloadText({ text, label, testId }: { text: string; label: string; testId: string }) {
   return (
-    <pre tabIndex={0} aria-label={label} className={`max-h-64 ${PRE}`} data-testid={testId}>
+    <pre tabIndex={0} aria-label={label} className={`max-h-64 ${CONSOLE_PRE}`} data-testid={testId}>
       {text}
     </pre>
   );

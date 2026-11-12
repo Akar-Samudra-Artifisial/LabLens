@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { type PiiSpanKind, SPAN_KIND_LABEL } from "@/lib/pii";
 import { AlertIcon, ShieldIcon } from "../icons";
 import { CALLOUT, CARD, CARD_BODY, H2, MUTED, PRE } from "../ui";
@@ -45,9 +46,27 @@ export function RedactedCard({ ocr, reading, badge }: RedactedCardProps) {
           (reading ? (
             <>
               <p className="sr-only">OCR and PII rules running on this device…</p>
-              <div className="grid gap-3 md:grid-cols-2" aria-hidden="true">
-                <div className="h-48 rounded-control bg-line motion-safe:animate-pulse" />
-                <div className="flex flex-col gap-2">
+              <div className="grid gap-4 md:grid-cols-2" aria-hidden="true" data-testid="scan-preview">
+                {/* Lembar dokumen abstrak + sinar pindai (transform saja). */}
+                <div className="relative h-56 overflow-hidden rounded-control border border-line bg-surface-2 p-4">
+                  <div className="flex flex-col gap-2.5">
+                    <span className="h-3 w-1/3 rounded bg-line-strong" />
+                    <span className="h-2 w-1/2 rounded bg-line" />
+                    <span className="mt-2 h-2 w-full rounded bg-line" />
+                    {["w-11/12", "w-4/5", "w-full", "w-3/4", "w-5/6", "w-2/3", "w-4/5"].map((w, i) => (
+                      <span key={i} className={`h-2 rounded bg-line ${w}`} />
+                    ))}
+                  </div>
+                  <div className="motion-decor absolute inset-0 animate-scan">
+                    <span className="absolute inset-x-0 bottom-0 h-20 bg-linear-to-b from-transparent to-device/20" />
+                    <span className="absolute inset-x-0 bottom-0 h-0.5 bg-device shadow-glow-device" />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3 font-mono text-xs">
+                  <p className="flex items-center gap-2 text-device-ink">
+                    <span className="size-1.5 rounded-full bg-device motion-safe:animate-breathe" />
+                    reading text on this device…
+                  </p>
                   {["w-3/4", "w-full", "w-5/6", "w-2/3", "w-4/5"].map((w) => (
                     <span key={w} className={`h-3 rounded bg-line motion-safe:animate-pulse ${w}`} />
                   ))}
@@ -62,8 +81,26 @@ export function RedactedCard({ ocr, reading, badge }: RedactedCardProps) {
           ))}
         {ocr && (
           <div className="grid gap-4 md:grid-cols-2">
-            {/* eslint-disable-next-line @next/next/no-img-element -- blob: URL lokal, bukan aset Next */}
-            <img src={ocr.imageUrl} alt="Preview of the redacted report image" className="w-full rounded-control border border-line bg-surface-2" />
+            <div className="relative self-start overflow-hidden rounded-control border border-line bg-surface-2">
+              {/* eslint-disable-next-line @next/next/no-img-element -- blob: URL lokal, bukan aset Next */}
+              <img src={ocr.imageUrl} alt="Preview of the redacted report image" className="block w-full" />
+              {/* Sorot area yang disensor satu per satu (posisi dari redactionShapes; gambar sudah tersensor). */}
+              <div aria-hidden="true" className="absolute inset-0">
+                {ocr.boxes.map((b, i) => (
+                  <span
+                    key={i}
+                    className={`absolute rounded-sm motion-safe:animate-pop motion-safe:[animation-delay:calc(var(--i)*110ms+450ms)] ${
+                      b.zone ? "border border-dashed border-device/70" : "border-2 border-device bg-device/15 shadow-glow-device"
+                    }`}
+                    style={{ "--i": i, left: `${b.x}%`, top: `${b.y}%`, width: `${b.w}%`, height: `${b.h}%` } as CSSProperties}
+                  />
+                ))}
+                <div className="motion-decor absolute inset-0 animate-scan-once">
+                  <span className="absolute inset-x-0 bottom-0 h-16 bg-linear-to-b from-transparent to-device/25" />
+                  <span className="absolute inset-x-0 bottom-0 h-0.5 bg-device shadow-glow-device" />
+                </div>
+              </div>
+            </div>
             <div className="flex min-w-0 flex-col gap-3 text-xs">
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className={MUTED}>
@@ -72,8 +109,12 @@ export function RedactedCard({ ocr, reading, badge }: RedactedCardProps) {
                 {piiChips.length === 0 ? (
                   <span className={MUTED}>none</span>
                 ) : (
-                  piiChips.map(([k, n]) => (
-                    <span key={k} className="rounded-full border border-device/40 bg-device-soft px-2 py-0.5 font-medium text-device-ink">
+                  piiChips.map(([k, n], i) => (
+                    <span
+                      key={k}
+                      className="rounded-full border border-device/40 bg-device-soft px-2 py-0.5 font-medium text-device-ink motion-safe:animate-pop motion-safe:[animation-delay:calc(var(--i)*70ms+300ms)]"
+                      style={{ "--i": i } as CSSProperties}
+                    >
                       {SPAN_KIND_LABEL[k as PiiSpanKind]} {n}
                     </span>
                   ))

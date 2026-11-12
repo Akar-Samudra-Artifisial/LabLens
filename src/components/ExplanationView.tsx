@@ -4,7 +4,8 @@ import type { ExplainLanguage, ExplanationResult, LabTestResult } from "@/lib/ai
 import { FlagBadge } from "./FlagBadge";
 import { QuestionIcon } from "./icons";
 import { MedicalDisclaimer } from "./MedicalDisclaimer";
-import { BTN_SECONDARY } from "./ui";
+import { RangeBar, RangeScaleNote } from "./RangeBar";
+import { BTN_SECONDARY, DISPLAY_NUM, EYEBROW, LIFT } from "./ui";
 
 interface ExplanationViewProps {
   explanation: ExplanationResult;
@@ -46,13 +47,14 @@ export function ExplanationView({ explanation, rows, sentIndices, language }: Ex
 
   return (
     <section aria-labelledby="explanation-heading" className="flex flex-col gap-5 motion-safe:animate-enter" data-testid="explanation">
-      <div className="flex flex-col gap-2 rounded-control border border-cloud/40 bg-cloud-soft p-4">
-        <h3 id="explanation-heading" className="text-lg font-semibold tracking-tight">
+      <div className="relative flex flex-col gap-2 overflow-hidden rounded-card border border-cloud/40 bg-cloud-soft p-5 shadow-glow-cloud">
+        <span aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-cloud to-transparent" />
+        <p className={`${EYEBROW} text-cloud-ink`}>
+          Gemini · {rows.length} tests · {flagged} outside the reference range
+        </p>
+        <h3 id="explanation-heading" className="text-xl font-semibold tracking-tight">
           Your results, explained
         </h3>
-        <p className="text-xs font-medium text-cloud-ink">
-          {rows.length} tests · {flagged} outside the reference range
-        </p>
         <p lang={language} className="text-base leading-relaxed" data-testid="explanation-summary">
           {explanation.summary}
         </p>
@@ -63,15 +65,17 @@ export function ExplanationView({ explanation, rows, sentIndices, language }: Ex
           const r = rows[i];
           const ex = matched[i];
           return (
-            <li key={`${i}-${r.testName}`} className={`flex flex-col gap-2 rounded-control border bg-surface p-3.5 ${CARD_TONE[r.flag]}`}>
+            <li key={`${i}-${r.testName}`} className={`flex flex-col gap-2.5 rounded-card border bg-surface p-4 motion-safe:animate-enter ${LIFT} ${CARD_TONE[r.flag]}`}>
               <div className="flex items-start justify-between gap-2">
                 <h4 className="font-semibold leading-snug">{r.testName}</h4>
                 <FlagBadge flag={r.flag} />
               </div>
               <p className="text-sm">
-                <span className="font-mono text-lg font-semibold tabular-nums">{r.value}</span> <span className="text-muted">{r.unit}</span>
-                {r.referenceRange && <span className="block text-xs text-muted">Reference {r.referenceRange}</span>}
+                <span className={`${DISPLAY_NUM} text-2xl`}>{r.value}</span> <span className="text-muted">{r.unit}</span>
+                {r.referenceRange && <span className="block font-mono text-xs text-muted">Reference {r.referenceRange}</span>}
               </p>
+              <RangeBar value={r.value} unit={r.unit} range={r.referenceRange} flag={r.flag} />
+
               {ex ? (
                 <p lang={language} className="text-sm leading-relaxed">
                   {ex.explanation}
@@ -87,6 +91,7 @@ export function ExplanationView({ explanation, rows, sentIndices, language }: Ex
           );
         })}
       </ul>
+      <RangeScaleNote />
       {collapsible && (
         <button
           type="button"
@@ -102,7 +107,7 @@ export function ExplanationView({ explanation, rows, sentIndices, language }: Ex
         </button>
       )}
 
-      <div className="rounded-control border border-line p-4">
+      <div className="rounded-card border border-line bg-surface-2 p-4">
         <h4 className="flex items-center gap-2 font-semibold">
           <span className="text-cloud-ink">
             <QuestionIcon size={18} />

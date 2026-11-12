@@ -137,6 +137,24 @@ export const SpinnerIcon = ({ className = "", ...p }: IconProps) => (
   </Svg>
 );
 
+/** Kilau AI (model on-device / ekstraksi). */
+export const SparkIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 3.5c.6 3.9 2.6 5.9 6.5 6.5-3.9.6-5.9 2.6-6.5 6.5-.6-3.9-2.6-5.9-6.5-6.5 3.9-.6 5.9-2.6 6.5-6.5Z" />
+    <path d="M18.5 15.5c.25 1.6 1 2.35 2.5 2.5-1.5.25-2.25 1-2.5 2.5-.25-1.5-1-2.25-2.5-2.5 1.5-.15 2.25-.9 2.5-2.5Z" />
+  </Svg>
+);
+
+/** Wordmark LabLens: lensa dengan cincin aperture + baris data di dalamnya. */
+export const LensMark = (p: IconProps) => (
+  <Svg {...p} strokeWidth={1.9}>
+    <circle cx="10.5" cy="10.5" r="6.8" />
+    <circle cx="10.5" cy="10.5" r="3.6" opacity="0.55" />
+    <path d="M8.6 10.5h3.8" />
+    <path d="m15.6 15.6 4.4 4.4" />
+  </Svg>
+);
+
 /** Logo: lensa di atas lembar laporan. */
 export const LogoMark = (p: IconProps) => (
   <Svg {...p} strokeWidth={2}>

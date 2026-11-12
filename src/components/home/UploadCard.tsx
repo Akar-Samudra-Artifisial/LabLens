@@ -1,9 +1,10 @@
 import { useId } from "react";
 import { CLOUD_EXTRACT_TIMEOUT_MS, EXTRACT_TIMEOUT_MS, type ExtractStage } from "@/lib/ai/router";
-import { AlertIcon, CloudIcon, DeviceIcon, LockIcon, ScanIcon, SpinnerIcon, UploadIcon } from "../icons";
+import { AlertIcon, CloudIcon, DeviceIcon, LockIcon, ScanIcon, SpinnerIcon } from "../icons";
 import { LocationTag } from "../LocationTag";
 import type { FallbackPreview } from "../PayloadInspector";
 import { BTN_CLOUD, BTN_DEVICE, BTN_SECONDARY, CALLOUT, CARD, CARD_BODY, FOCUS, H2, MUTED, PRE } from "../ui";
+import { Dropzone } from "./Dropzone";
 import type { BusyMode } from "./types";
 
 /** Laporan sintetis (data fiktif) di public/samples — sama dengan fixture spike. */
@@ -72,21 +73,8 @@ export function UploadCard(p: UploadCardProps) {
           <LocationTag where="device" label="Processed on this device" />
         </div>
 
-        <div className="flex flex-col gap-3 rounded-control border border-dashed border-line-strong bg-surface-2 p-4">
-          <label className="flex flex-col gap-2 text-sm">
-            <span className="flex items-center gap-2 font-medium">
-              <UploadIcon size={16} />
-              Lab report image (JPEG or PNG)
-            </span>
-            <input
-              key={p.inputKey}
-              type="file"
-              accept="image/jpeg,image/png"
-              disabled={p.busy}
-              className={`w-full rounded-control text-sm text-muted file:mr-3 file:cursor-pointer file:rounded-control file:border file:border-line-strong file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-2 ${FOCUS}`}
-              onChange={(e) => p.onFileChange(e.target.files?.[0] ?? null)}
-            />
-          </label>
+        <div className="flex flex-col gap-4">
+          <Dropzone file={p.file} sample={p.sample} inputKey={p.inputKey} disabled={p.busy} onFile={p.onFileChange} />
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Sample reports">
               <span className={`text-xs font-medium ${MUTED}`}>No report at hand?</span>
@@ -98,12 +86,6 @@ export function UploadCard(p: UploadCardProps) {
             </div>
             <span className={`text-xs ${MUTED}`}>Synthetic reports with fictitious patients — no real data.</span>
           </div>
-          {p.file && (
-            <p className={`text-xs ${MUTED}`} data-testid="selected-file">
-              Selected: <span className="font-mono text-ink">{p.file.name}</span>
-              {p.sample && " (synthetic sample, fictitious data)"}
-            </p>
-          )}
           {p.sampleError && (
             <p className="text-sm text-danger-ink" role="alert">
               {p.sampleError}
