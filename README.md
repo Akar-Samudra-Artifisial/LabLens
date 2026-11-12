@@ -5,6 +5,7 @@
 Built for the **#BuildHybridAI 2026** hackathon with **Firebase AI Logic hybrid inference**: Gemini Nano on-device in Chrome, plus Gemini in the cloud.
 
 - **Live demo:** <https://lablens-hybridai-bt.web.app>
+- **Demo video (2:55):** <https://youtu.be/O2hj3xAq24Q>
 - **Repository:** <https://github.com/Akar-Samudra-Artifisial/LabLens>
 - **License:** MIT
 
@@ -110,7 +111,7 @@ This runs automatically on `postinstall`. Run `pnpm ocr:assets` if the folder is
 ## Testing
 
 ```bash
-pnpm test        # vitest: 133 unit tests (PII detection/masking, allowlist, guard, fallback text, streaming JSON, router, explanation)
+pnpm test        # vitest: 207 unit tests (PII detection/masking, allowlist, guard, fallback text, streaming JSON, router, explanation)
 pnpm lint
 pnpm build       # static export (Firebase Hosting)
 pnpm ocr:fixtures  # regenerate the OCR text fixtures used by the PII tests (src/lib/pii/)

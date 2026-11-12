@@ -10,7 +10,7 @@
 
 **Category:** Best Web/Chrome
 
-**Video demo URL:** `TODO: YouTube/Vimeo link (≤3 minutes)`
+**Video demo URL:** <https://youtu.be/O2hj3xAq24Q> (2:55, public, English with English subtitles)
 
 ---
 
@@ -44,7 +44,7 @@ Two features make the routing visible. The **Routing transparency** panel shows 
 - **Firebase App Check** with `ReCaptchaEnterpriseProvider`, enforced for Firebase AI Logic.
 - **tesseract.js 7** OCR in a Web Worker with self-hosted WASM and language data (no CDN), under a strict Content Security Policy.
 - A deterministic **PII layer** (`src/lib/pii/`): regex and label rules, header/footer zone detection, canvas redaction, a per-field allowlist for cloud payloads, and an `assertNoPii` guard that re-checks every cloud payload against generic patterns and against the PII values found in this document.
-- **Vitest** with 133 unit tests, and a **playwright-core spike runner** that drives real Chrome with Gemini Nano against synthetic fixtures with ground truth, to measure accuracy, latency, PII leaks and network traffic.
+- **Vitest** with 207 unit tests, and a **playwright-core spike runner** that drives real Chrome with Gemini Nano against synthetic fixtures with ground truth, to measure accuracy, latency, PII leaks and network traffic.
 
 ### Challenges we ran into
 
